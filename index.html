@@ -322,6 +322,25 @@ const CONFIG = {
       },
       hints: { 2: "İpucu: İtalyan mutfağının en pahalı lezzetlerinden", 3: "İpucu: toprağın altında bulunur, domuzlar arar", 4: "İpucu: t _ _ f", 6: "İpucu: t r _ f", 8: "Tamam, pes ettim: cevap “trüf”" },
     },
+    {
+      q: "Beniz'in favori fast food'u nedir?",
+      a: ["hamburger", "burger"],
+      contains: ["burger"],   // "cheeseburger", "Hamburger menü" etc. also count
+      replies: {
+        "pizza":     "Pizza mı? İtalya'ya fazla takıldık",
+        "döner":     "Döner mi? Yerli ve milli ama o değil",
+        "tavuk":     "Tavuk mu? Biraz daha dolgun düşün",
+        "nugget":    "Nugget mı? Çocuk menüsü değil bu",
+        "patates":   "Patates yanında gelir, asıl yıldız o değil",
+        "hot dog":   "Hot dog mu? Sosis değil, daha büyük düşün",
+        "sosisli":   "Sosisli mi? Sosis değil, daha büyük düşün",
+        "taco":      "Taco mu? Meksika'ya gitmeyelim",
+        "lahmacun":  "Lahmacun mu? Yaklaşmadın bile",
+        "tost":      "Tost mu? İki ekmek arası ama o değil",
+        "köfte":     "Çok yaklaştın… ama ekmek arasında, Amerikan usulü",
+      },
+      hints: { 2: "İpucu: iki ekmek arasında, Amerikan usulü", 3: "İpucu: içinde köfte, peynir, marul var", 4: "İpucu: h _ _ b _ _ g _ _", 6: "İpucu: h a m b _ r g e r", 8: "Tamam, pes ettim: cevap “hamburger”" },
+    },
   ],
   flowers: [
     { variety: "pompon",     colour: "gold" },
@@ -1663,6 +1682,8 @@ const CONFIG = {
   let pick = Math.floor(Math.random() * POOL.length), lastQ = -1;
   try { lastQ = +(localStorage.getItem("kiku-last-q") ?? -1); } catch (e) {}
   if (POOL.length > 1 && pick === lastQ) pick = (pick + 1 + Math.floor(Math.random() * (POOL.length - 1))) % POOL.length;
+  const forceQ = /q=(\d+)/.exec(location.hash); // testing: #q=5 always asks question 5 (1-based)
+  if (forceQ && +forceQ[1] >= 1 && +forceQ[1] <= POOL.length) pick = +forceQ[1] - 1;
   try { localStorage.setItem("kiku-last-q", pick); } catch (e) {}
   const QS = POOL.length ? [POOL[pick]] : [];
   const gate = envWrap.querySelector(".gate"), gateIn = gate.querySelector(".gate-in"), gateLines = gate.querySelector(".gate-lines");
