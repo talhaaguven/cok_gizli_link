@@ -175,7 +175,7 @@ body { background: var(--ink); }
 .envelope-wrap.open .env-flap { transform: rotateX(180deg); }
 .envelope-wrap.flap-back .env-flap { z-index: 1; }
 .envelope-wrap.card-out .env-card { transform: translateY(-46%); }
-/* the wish cake: rises in the middle near the end; blow (mic) or tap the candle */
+/* the wish cake: rises in the middle once the envelope opens; blow (mic) or tap the candle, then the flower */
 .cake-wrap {
   position: fixed; inset: 0; z-index: 14; display: grid; place-items: center; align-content: center; gap: 14px;
   background: radial-gradient(70% 60% at 50% 55%, rgba(10, 14, 32, 0.72), rgba(4, 6, 16, 0.9));
@@ -455,10 +455,9 @@ const CONFIG = {
   board: "cream",
   message: ["Doğum günün kutlu olsun"],
   nicknames: ["Kürk prensesi", "Altın küre", "Şans meleği", "Avukat hanım", "Balkabağı"],
-  // the wish cake: shows up this many seconds after the message is written. Blow into the mic, or tap the candle.
+  // the wish cake: shows up right after the envelope opens, before the flower. Blow into the mic, or tap the candle.
   // mic: false = tap only (no microphone permission is asked). Set cake to null to skip it.
   cake: {
-    after: 3,
     wish: "Bir dilek tut ve mumu üfle",
     done: "Dileğin kabul olsun",
     mic: true,
@@ -1688,9 +1687,9 @@ const CONFIG = {
   const CAKE = CONFIG.cake && CONFIG.cake.wish ? CONFIG.cake : null;
   const cakeWrap = document.getElementById("cake"), cakeBtn = cakeWrap.querySelector(".cake"), cakeMsg = cakeWrap.querySelector(".cake-msg");
   const flameEl = cakeWrap.querySelector(".flame"), confCv = document.getElementById("confetti"), confCtx = confCv.getContext("2d");
-  let cakeFor = null, cakeLit = false, mic = null;
-  function showCake() {
-    cakeFor = bouquet; cakeLit = true;
+  let cakeLit = false, mic = null, afterCake = null;
+  function showCake(then) {
+    cakeLit = true; afterCake = then;
     cakeWrap.classList.remove("out"); flameEl.style.removeProperty("--lean"); flameEl.style.removeProperty("--gust");
     cakeMsg.classList.remove("done"); cakeMsg.textContent = CAKE.wish;
     cakeWrap.setAttribute("aria-hidden", "false"); cakeWrap.classList.add("show");
@@ -1741,6 +1740,8 @@ const CONFIG = {
     await wait(4200);
     cakeWrap.classList.remove("show"); cakeWrap.setAttribute("aria-hidden", "true");
     canvas.focus({ preventScroll: true });
+    const then = afterCake; afterCake = null;
+    if (then) then();
   }
   cakeBtn.addEventListener("click", blowOut);
   function confetti() { // paper pieces: a burst from the cake, then a slow fall
@@ -1819,7 +1820,6 @@ const CONFIG = {
     }
     if (pk < 1) { ctx.globalAlpha = 1 - pk; ctx.fillStyle = grain; ctx.fillRect(0, 0, W, H); ctx.globalAlpha = 1; }
     if (bouquet) { drawMessage(age); drawNicknames(age); }
-    if (CAKE && bouquet && cakeFor !== bouquet && MSG.length && age >= msgEnd() + (+CAKE.after || 0)) showCake();
     requestAnimationFrame(frame);
   }
 
@@ -1855,7 +1855,10 @@ const CONFIG = {
     envWrap.classList.add("open");                                 // the seal lets go, the flap swings up
     later(620, () => envWrap.classList.add("flap-back"));           // the open flap goes behind the card
     later(950, () => envWrap.classList.add("card-out"));            // the card slides out
-    later(1900, () => { envWrap.classList.add("gone"); newBouquet(500); canvas.focus({ preventScroll: true }); }); // and the drawing begins
+    later(1900, () => { // the cake first, then the drawing begins
+      envWrap.classList.add("gone");
+      if (CAKE) showCake(() => newBouquet(900)); else { newBouquet(500); canvas.focus({ preventScroll: true }); }
+    });
     later(2800, () => envWrap.remove());
   }
   // the security check: a pretend face scan, then the questions; the envelope only opens once every answer is right
