@@ -174,7 +174,8 @@ const CONFIG = {
 (() => {
   const $ = id => document.getElementById(id), stage = $("stage"), paper = $("paper");
   const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
-  const KEY = "randevu-tutanagi", PENDING = "randevu-pending";
+  const KEY = "randevu-tutanagi-2", // change this name to make every phone forget its signed report
+        PENDING = "randevu-pending";
   const C = CONFIG.clauses, now = new Date();
   const dateTR = d => d.toLocaleDateString("tr-TR", { day: "numeric", month: "long", year: "numeric" });
   const pad = n => String(n).padStart(2, "0");
@@ -304,6 +305,7 @@ const CONFIG = {
 
   // testing: #step=3 opens clause 3, #step=sign the signing page, #reset forgets a signed contract
   if (/reset/.test(location.hash)) { save(KEY, null); save(PENDING, null); }
+  save("randevu-tutanagi", null); // forget the test run
   let signed = load(KEY);
   if (signed && CONFIG.resetAfterMinutes && !(Date.now() - new Date(signed.signedAt).getTime() < CONFIG.resetAfterMinutes * 60000)) { save(KEY, null); signed = null; } // an hour has passed: a clean sheet
   const jump = /step=(\w+)/.exec(location.hash);
