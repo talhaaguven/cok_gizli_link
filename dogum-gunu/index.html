@@ -1,0 +1,2038 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Kiku</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@1,500&family=MonteCarlo&display=swap" rel="stylesheet">
+<style>
+/* A bouquet of chrysanthemums on a night-indigo sheet. A camera follows the pen while it draws the last flower;
+   once it is in the bouquet the page turns into v3's paper board, then the lights go down and paper fireworks
+   open in the night behind it. */
+:root { --ink: #0d1325; --night: #1b2747; --gold: #f0bf4c; --board: #e7dfd2; color-scheme: dark; }
+html, body { height: 100%; margin: 0; }
+body { background: var(--ink); }
+.app {
+  position: fixed; inset: 0; overflow: hidden;
+  background:
+    radial-gradient(60% 50% at 50% 38%, rgba(84, 108, 176, 0.30), transparent 70%),
+    radial-gradient(120% 80% at 50% 115%, #090d1c 0%, transparent 60%),
+    linear-gradient(180deg, var(--night) 0%, var(--ink) 100%);
+}
+.app::after { /* vignette, while the flower is drawn */
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  background: radial-gradient(120% 90% at 50% 45%, transparent 55%, rgba(3, 5, 14, 0.55) 100%);
+  opacity: var(--drawing, 1);
+}
+#sky { position: absolute; inset: 0; width: 100%; height: 100%; display: block; cursor: pointer; touch-action: manipulation; }
+#sky:focus-visible { outline: 2px solid var(--gold); outline-offset: -6px; }
+.grain, .light { position: fixed; inset: 0; pointer-events: none; opacity: 0; }
+.grain { mix-blend-mode: multiply; background-size: 200px 200px; }
+.light { background: radial-gradient(circle at 20% 10%, rgba(255,248,235,0.10), rgba(40,25,10,0.10) 110%); }
+
+/* ---------- the envelope: tap it, it opens, then the drawing starts ---------- */
+.envelope-wrap {
+  position: fixed; inset: 0; z-index: 10; display: grid; place-items: center; align-content: center; gap: 22px;
+  transition: opacity 0.8s ease, transform 0.8s ease;
+}
+.envelope-wrap.gone { opacity: 0; transform: scale(1.08); pointer-events: none; }
+.env {
+  --w: min(78vw, 420px);
+  position: relative; width: var(--w); height: calc(var(--w) * 0.64);
+  perspective: 1100px; cursor: pointer; outline: none;
+  animation: env-in 1s cubic-bezier(.2,.8,.2,1) both, env-float 4.5s ease-in-out 1s infinite;
+}
+.env:focus-visible .env-back { outline: 2px solid var(--gold); outline-offset: 6px; }
+.env > * { position: absolute; inset: 0; }
+.env-back { /* the inside of the envelope */
+  border-radius: 6px; background: linear-gradient(180deg, #d9c9ae, #cdbb9c);
+  box-shadow: 0 22px 46px rgba(2, 4, 14, 0.55), 0 4px 10px rgba(2, 4, 14, 0.35);
+  z-index: 0;
+}
+.env-card { /* the card inside */
+  inset: 7% 6% 6% 6%; border-radius: 3px; z-index: 2;
+  background: linear-gradient(180deg, #fffaf0, #f5ecdc);
+  box-shadow: 0 1px 3px rgba(60, 40, 20, 0.25), inset 0 0 0 6px #fffaf0, inset 0 0 0 7px rgba(200, 160, 80, 0.55);
+  display: grid; place-items: center;
+  transition: transform 0.9s cubic-bezier(.25,.8,.25,1);
+}
+.env-card svg { width: 22%; opacity: 0.9; }
+.env-pocket { /* the front: two side folds and the bottom fold */
+  z-index: 3; border-radius: 6px; overflow: hidden;
+  clip-path: polygon(0 0, 50% 54%, 100% 0, 100% 100%, 0 100%);
+  background: linear-gradient(180deg, #f3eadb, #e7dac4);
+}
+.env-pocket svg { width: 100%; height: 100%; display: block; }
+.env-flap {
+  height: 58%; z-index: 4; transform-origin: 50% 0; transform-style: preserve-3d;
+  transition: transform 0.75s cubic-bezier(.4,0,.2,1) 0.25s;
+}
+.env-flap > div { position: absolute; inset: 0; clip-path: polygon(0 0, 100% 0, 50% 100%); backface-visibility: hidden; }
+.env-flap .out { background: linear-gradient(180deg, #f6eee0, #eadfca); }
+.env-flap .out::after { /* a soft shadow line along the flap's edges */
+  content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, transparent 70%, rgba(80, 55, 25, 0.12));
+}
+.env-flap .in { /* the lining */
+  transform: rotateX(180deg);
+  background:
+    radial-gradient(circle, rgba(246, 214, 140, 0.55) 1.2px, transparent 1.6px) 0 0 / 14px 14px,
+    linear-gradient(0deg, #c97c97, #b86683);
+}
+.env-seal {
+  inset: auto; left: 50%; top: 58%; width: calc(var(--w) * 0.19); aspect-ratio: 1; z-index: 5;
+  transform: translate(-50%, -50%); border-radius: 48% 52% 50% 50% / 52% 47% 53% 48%;
+  background: radial-gradient(circle at 36% 30%, #9e2f45, #6d1427 55%, #460a18);
+  box-shadow: 0 3px 9px rgba(40, 0, 10, 0.45), inset 0 -3px 6px rgba(30, 0, 8, 0.45), inset 0 2px 4px rgba(230, 150, 165, 0.3);
+  display: grid; place-items: center;
+  transition: transform 0.45s cubic-bezier(.3,1.6,.5,1), opacity 0.45s ease;
+}
+.env-seal svg { width: 86%; overflow: visible; }
+.seal-mono { /* the initials, pressed into the wax in gold */
+  font: 400 40px "MonteCarlo", "Cormorant Garamond", cursive;
+  fill: #ffffff; filter: drop-shadow(0 1px 0.5px rgba(30, 0, 8, 0.6));
+}
+
+/* the security check: a pretend face scan, then the questions */
+.gate {
+  position: absolute; left: 50%; top: calc(50% + min(78vw, 420px) * 0.32 + 24px);
+  width: min(90vw, 460px); transform: translate(-50%, 8px);
+  display: grid; justify-items: center; gap: 10px; text-align: center;
+  font-family: "Cormorant Garamond", Georgia, serif; color: #f4ead6;
+  opacity: 0; visibility: hidden; transition: opacity 0.5s ease, transform 0.5s ease, visibility 0s 0.5s;
+}
+.envelope-wrap.asking .gate { opacity: 1; visibility: visible; transform: translate(-50%, 0); transition: opacity 0.5s ease, transform 0.5s ease; }
+.envelope-wrap.open .gate { opacity: 0; visibility: hidden; transition: opacity 0.4s ease, visibility 0s 0.4s; }
+.gate-title { font-size: 12.5px; letter-spacing: 0.2em; text-transform: uppercase; font-style: normal; font-weight: 500; color: #e8c57a; }
+.gate-lines { display: grid; gap: 2px; min-height: 1.3em; }
+.gate-lines:empty { display: none; }
+.gate-lines p { margin: 0; font-style: italic; font-weight: 500; font-size: clamp(16px, 4vw, 19px); line-height: 1.3; animation: line-in 0.35s ease both; }
+.gate-lines p.err { color: #ff9fb8; }
+.gate-lines p.ok, .gate-msg.ok, .yn-msg.ok { color: #b9f0c4; }
+@keyframes line-in { from { opacity: 0; transform: translateY(4px); } }
+.gate-bar { width: min(70%, 260px); height: 6px; border-radius: 99px; background: rgba(255,255,255,0.12); overflow: hidden; display: none; }
+.gate-bar i { display: block; height: 100%; width: 0; border-radius: inherit; background: linear-gradient(90deg, #e8c57a, #ff9fb8); }
+.gate.scanning .gate-bar { display: block; }
+.gate.scanning .gate-bar i { animation: bar-fill 1.8s cubic-bezier(.3,.1,.3,1) forwards; }
+@keyframes bar-fill { 70% { width: 88%; } 82% { width: 88%; } to { width: 100%; } }
+.gate-quiz { display: none; gap: 10px; justify-items: center; width: 100%; }
+.gate.quiz .gate-quiz { display: grid; animation: line-in 0.4s ease both; }
+.gate-yn { display: none; gap: 14px; justify-items: center; width: 100%; }
+.gate.yn .gate-quiz { display: none; }
+.gate.yn .gate-yn { display: grid; animation: line-in 0.4s ease both; }
+.yn-row { display: flex; gap: 14px; justify-content: center; align-items: center; min-height: 52px; }
+.yn-btn {
+  min-width: 96px; padding: 8px 22px; border-radius: 999px; border: 1px solid rgba(232, 197, 122, 0.7);
+  background: rgba(232, 197, 122, 0.1); color: #f4ead6; cursor: pointer; touch-action: manipulation;
+  font: italic 500 19px "Cormorant Garamond", Georgia, serif;
+  transition: transform 0.25s cubic-bezier(.3,1.5,.5,1), background 0.2s;
+}
+.yn-btn:hover, .yn-btn:focus-visible { background: rgba(232, 197, 122, 0.24); outline: none; }
+.yn-yes { background: rgba(232, 197, 122, 0.2); }
+.yn-no.loose { /* once it runs, it is free to go anywhere on the screen */
+  position: fixed; z-index: 12; margin: 0;
+  transition: left 0.28s cubic-bezier(.3,1.3,.5,1), top 0.28s cubic-bezier(.3,1.3,.5,1);
+}
+.yn-ghost { visibility: hidden; }
+.yn-msg { min-height: 1.3em; margin: 0; font-style: italic; font-size: 17px; opacity: 0.85; }
+.gate-q { margin: 0; font-style: italic; font-weight: 500; font-size: clamp(19px, 4.6vw, 24px); line-height: 1.25; }
+.gate-row { display: flex; gap: 10px; align-items: center; width: min(100%, 320px); }
+.gate-in {
+  flex: 1; min-width: 0; padding: 8px 4px; border: 0; border-bottom: 1px solid rgba(232, 197, 122, 0.6);
+  background: transparent; color: #fff; outline: none; text-align: center;
+  font: italic 500 20px "Cormorant Garamond", Georgia, serif;
+}
+.gate-in::placeholder { color: rgba(244, 234, 214, 0.35); }
+.gate-in:focus { border-bottom-color: #e8c57a; }
+.gate-go {
+  padding: 7px 18px; border-radius: 999px; border: 1px solid rgba(232, 197, 122, 0.7);
+  background: rgba(232, 197, 122, 0.1); color: #f4ead6; cursor: pointer;
+  font: italic 500 18px "Cormorant Garamond", Georgia, serif;
+}
+.gate-go:hover, .gate-go:focus-visible { background: rgba(232, 197, 122, 0.22); outline: none; }
+.gate-msg { min-height: 1.3em; margin: 0; font-style: italic; font-size: 17px; }
+.gate-hint { min-height: 1.2em; margin: 0; font-style: italic; font-size: 15px; color: #e8c57a; opacity: 0.85; }
+.gate.wrong .gate-row { animation: gate-shake 0.42s ease; }
+@keyframes gate-shake { 20% { transform: translateX(-8px); } 40% { transform: translateX(7px); } 60% { transform: translateX(-5px); } 80% { transform: translateX(3px); } }
+/* the scan line sweeping the screen */
+.scanline {
+  position: fixed; left: 0; right: 0; top: 0; height: 3px; z-index: 11; pointer-events: none; opacity: 0;
+  background: linear-gradient(90deg, transparent, #ff9fb8 20%, #fff 50%, #ff9fb8 80%, transparent);
+  box-shadow: 0 0 18px 4px rgba(255, 159, 184, 0.55);
+}
+.envelope-wrap.scan .scanline { animation: scan-sweep 1.8s ease-in-out forwards; }
+@keyframes scan-sweep { 0% { opacity: 0; top: 4%; } 10% { opacity: 1; } 50% { top: 96%; } 90% { opacity: 1; } 100% { opacity: 0; top: 4%; } }
+/* the envelope's moods */
+.envelope-wrap.nope .env { animation: env-nope 0.55s ease; }
+.envelope-wrap.yay .env { animation: env-yay 0.7s ease; }
+@keyframes env-nope { 15% { transform: rotate(-5deg); } 35% { transform: rotate(4deg); } 55% { transform: rotate(-3deg); } 75% { transform: rotate(2deg); } }
+@keyframes env-yay { 30% { transform: translateY(-22px) scale(1.04); } 55% { transform: translateY(0) scale(0.98); } 75% { transform: translateY(-8px); } }
+
+/* opening, step by step */
+.envelope-wrap.open .env { animation-play-state: paused; }
+.envelope-wrap.open .env-seal { transform: translate(-50%, -50%) scale(1.25); opacity: 0; }
+.envelope-wrap.open .env-flap { transform: rotateX(180deg); }
+.envelope-wrap.flap-back .env-flap { z-index: 1; }
+.envelope-wrap.card-out .env-card { transform: translateY(-46%); }
+/* the wish cake: rises in the middle once the envelope opens; blow (mic) or tap the candle, then the flower */
+.cake-wrap {
+  position: fixed; inset: 0; z-index: 14; display: grid; place-items: center; align-content: center; gap: 14px;
+  background: radial-gradient(70% 60% at 50% 55%, rgba(10, 14, 32, 0.72), rgba(4, 6, 16, 0.9));
+  -webkit-backdrop-filter: blur(7px); backdrop-filter: blur(7px);
+  font-family: "Cormorant Garamond", Georgia, serif; color: #f4ead6; text-align: center;
+  opacity: 0; visibility: hidden; transition: opacity 0.9s ease, visibility 0s 0.9s;
+}
+.cake-wrap.show { opacity: 1; visibility: visible; transition: opacity 0.9s ease; }
+.cake-msg { margin: 0; padding: 0 16px; font-style: italic; font-weight: 500; font-size: clamp(22px, 5.4vw, 32px); line-height: 1.2; min-height: 1.2em; }
+.cake-msg.done { color: #ffc4d8; animation: line-in 0.6s ease both; }
+.cake {
+  width: min(52vw, 230px); cursor: pointer; touch-action: manipulation; border: 0; padding: 0; background: none;
+  transform: translateY(40px); opacity: 0; transition: transform 1.1s cubic-bezier(.2,.9,.3,1.1) 0.2s, opacity 0.9s ease 0.2s;
+}
+.cake-wrap.show .cake { transform: none; opacity: 1; }
+.cake:focus-visible { outline: 2px solid var(--gold); outline-offset: 6px; border-radius: 12px; }
+.cake svg { display: block; width: 100%; height: auto; overflow: visible; }
+.flame { transform-box: fill-box; transform-origin: 50% 100%; transform: rotate(var(--lean, 0deg)) scale(var(--gust, 1)); transition: transform 0.12s ease-out; }
+.flame-in { transform-box: fill-box; transform-origin: 50% 100%; animation: flicker 0.22s ease-in-out infinite alternate; }
+@keyframes flicker { from { transform: scale(1, 1) skewX(-2deg); } to { transform: scale(0.94, 1.06) skewX(2deg); } }
+.flame-glow { transition: opacity 0.5s ease; }
+.cake-wrap.out .flame { transform: rotate(var(--lean, 18deg)) scale(0.05); opacity: 0; transition: transform 0.35s ease-in, opacity 0.35s ease-in; }
+.cake-wrap.out .flame-glow { opacity: 0; }
+.smoke path { fill: none; stroke: rgba(230, 228, 236, 0.55); stroke-width: 2.2; stroke-linecap: round; stroke-dasharray: 60; stroke-dashoffset: 60; opacity: 0; }
+.cake-wrap.out .smoke path { animation: smoke 2.4s ease-out forwards; }
+.cake-wrap.out .smoke path:nth-child(2) { animation-delay: 0.25s; }
+.cake-wrap.out .smoke path:nth-child(3) { animation-delay: 0.5s; }
+@keyframes smoke { 0% { opacity: 0; stroke-dashoffset: 60; transform: translateY(0); } 15% { opacity: 1; } 100% { opacity: 0; stroke-dashoffset: 0; transform: translateY(-26px); } }
+/* the way back to the planet: a little planet in the corner, always there */
+.home { position: fixed; z-index: 40; left: max(14px, env(safe-area-inset-left) + 10px); top: max(14px, env(safe-area-inset-top) + 10px);
+  width: 48px; height: 48px; display: grid; place-items: center; border-radius: 50%; background: rgba(10, 14, 32, 0.45);
+  -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); box-shadow: 0 0 0 1px rgba(255, 196, 216, 0.25);
+  opacity: 0; visibility: hidden; transform: scale(0.8); transition: opacity 1.2s ease, transform 1.2s ease, visibility 0s 1.2s; -webkit-tap-highlight-color: transparent; }
+.home.show { opacity: 0.85; visibility: visible; transform: none; transition: opacity 1.2s ease, transform 1.2s ease; }
+.home:hover { opacity: 1; }
+.home:focus-visible { outline: 2px solid var(--gold); outline-offset: 3px; }
+.home svg { width: 32px; height: 32px; display: block; overflow: visible; }
+.confetti { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 15; pointer-events: none; }
+@keyframes env-in { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: none; } }
+@keyframes env-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+@media (prefers-reduced-motion: reduce) {
+  .env, .gate.wrong .gate-row, .envelope-wrap.nope .env, .envelope-wrap.yay .env { animation: none; }
+  .envelope-wrap.scan .scanline { animation-duration: 0.01s; }
+  .yn-no.loose { transition-duration: 0.05s; }
+  .flame-in, .cake-wrap.out .smoke path { animation: none; }
+  .cake { transition-duration: 0.01s; transition-delay: 0s; }
+  .env-flap, .env-card, .env-seal, .envelope-wrap { transition-duration: 0.01s; transition-delay: 0s; }
+}
+</style>
+</head>
+<body>
+<main class="app">
+  <canvas id="sky" tabindex="0" aria-label="After the envelope is opened, a pink chrysanthemum is drawn with a glowing gold pen, stem first, then coloured and placed into a finished bouquet. Then the lights go down, paper fireworks burst in the night sky, and the pen writes Doğum günün kutlu olsun under the bouquet. Tap, or press Enter, to watch it again."></canvas>
+</main>
+<div class="grain" id="grain"></div>
+<div class="light"></div>
+<div class="envelope-wrap" id="envelope">
+  <div class="env" role="button" tabindex="0" aria-label="Zarfı aç">
+    <div class="env-back"></div>
+    <div class="env-card"><svg viewBox="-50 -50 100 100" aria-hidden="true" class="kiku"></svg></div>
+    <div class="env-pocket"><svg viewBox="0 0 100 64" preserveAspectRatio="none" aria-hidden="true">
+      <path d="M0 0 L50 34.6 L0 64 Z" fill="#efe4d1"/><path d="M100 0 L50 34.6 L100 64 Z" fill="#ece0cb"/>
+      <path d="M0 64 L50 31 L100 64 Z" fill="#f4ebdc"/>
+      <path d="M0 64 L50 31 L100 64" fill="none" stroke="rgba(120,90,50,0.18)" stroke-width="0.35"/>
+    </svg></div>
+    <div class="env-flap"><div class="out"></div><div class="in"></div></div>
+    <div class="env-seal"><svg viewBox="-50 -50 100 100" aria-hidden="true">
+      <text class="seal-mono" y="3" text-anchor="middle" dominant-baseline="middle">B.K.</text>
+    </svg></div>
+  </div>
+  <div class="scanline" aria-hidden="true"></div>
+  <form class="gate" autocomplete="off" novalidate>
+    <span class="gate-title">Güvenlik kontrolü</span>
+    <div class="gate-lines" aria-live="polite"></div>
+    <div class="gate-bar" aria-hidden="true"><i></i></div>
+    <div class="gate-quiz">
+      <label class="gate-q" for="gate-in"></label>
+      <div class="gate-row">
+        <input class="gate-in" id="gate-in" type="text" placeholder="cevabın…" autocapitalize="off" autocorrect="off" spellcheck="false">
+        <button class="gate-go" type="submit">Aç</button>
+      </div>
+      <p class="gate-msg" aria-live="polite"></p>
+      <p class="gate-hint" aria-live="polite"></p>
+    </div>
+    <div class="gate-yn">
+      <p class="gate-q yn-q"></p>
+      <div class="yn-row">
+        <button type="button" class="yn-btn yn-yes"></button>
+        <button type="button" class="yn-btn yn-no"></button>
+      </div>
+      <p class="yn-msg" aria-live="polite"></p>
+    </div>
+  </form>
+</div>
+<a class="home" id="home" href="../index.html" aria-label="Gezegene dön">
+  <svg viewBox="0 0 32 32" aria-hidden="true">
+    <ellipse cx="16" cy="16" rx="15" ry="4.5" transform="rotate(-20 16 16)" fill="none" stroke="#f6c64f" stroke-width="1.4" opacity="0.55"/>
+    <circle cx="16" cy="16" r="9.5" fill="#f7a3c6"/>
+    <path d="M8 12.5c3-1.5 5 1.5 8 .5s4-3.500 7-2.500a9.500 9.500 0 0 0-15 2z" fill="#b48cea"/>
+    <path d="M9.500 21c3 1 4.500-2 7.500-1.500s4 2 6.500 0a9.500 9.500 0 0 1-14 1.500z" fill="#b48cea"/>
+    <path d="M1.800 21.200A15 4.500 -20 0 0 30.200 10.800" fill="none" stroke="#f6c64f" stroke-width="1.400" stroke-linecap="round"/>
+  </svg>
+</a>
+<div class="cake-wrap" id="cake" aria-hidden="true">
+  <p class="cake-msg" aria-live="polite"></p>
+  <button class="cake" type="button" aria-label="Mumu üfle">
+    <svg viewBox="0 0 200 210" aria-hidden="true">
+      <defs>
+        <radialGradient id="cg-glow"><stop offset="0" stop-color="#ffd98a" stop-opacity="0.55"/><stop offset="1" stop-color="#ffd98a" stop-opacity="0"/></radialGradient>
+        <linearGradient id="cg-flame" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#ff9a3c"/><stop offset="0.45" stop-color="#ffd36b"/><stop offset="1" stop-color="#fff6d8"/></linearGradient>
+        <linearGradient id="cg-body" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#e9dcc6"/><stop offset="0.35" stop-color="#f8efe0"/><stop offset="1" stop-color="#e2d3ba"/></linearGradient>
+        <linearGradient id="cg-icing" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#f28fb0"/><stop offset="0.4" stop-color="#ffc4d8"/><stop offset="1" stop-color="#ec7fa4"/></linearGradient>
+        <linearGradient id="cg-candle" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#efe3cf"/><stop offset="0.45" stop-color="#fffaf0"/><stop offset="1" stop-color="#e6d6bc"/></linearGradient>
+      </defs>
+      <circle class="flame-glow" cx="100" cy="34" r="46" fill="url(#cg-glow)"/>
+      <!-- plate -->
+      <ellipse cx="100" cy="190" rx="92" ry="14" fill="#c99a3e"/>
+      <ellipse cx="100" cy="186" rx="92" ry="13" fill="#f0c766"/>
+      <ellipse cx="100" cy="185" rx="80" ry="9" fill="#e9b94f" opacity="0.6"/>
+      <!-- cake body -->
+      <path d="M30 112 V176 Q100 196 170 176 V112 Z" fill="url(#cg-body)"/>
+      <path d="M30 160 Q100 178 170 160" fill="none" stroke="#f0bf4c" stroke-width="2" stroke-dasharray="0.1 9" stroke-linecap="round"/>
+      <!-- pink icing with drips -->
+      <ellipse cx="100" cy="112" rx="70" ry="15" fill="url(#cg-icing)"/>
+      <path d="M30 112 Q30 128 36 128 Q42 128 42 118 Q46 136 53 136 Q60 136 60 122 Q66 130 72 130 Q78 130 80 121 Q86 142 94 142 Q101 142 102 124 Q108 132 114 132 Q120 132 122 122 Q128 138 136 138 Q143 138 144 122 Q150 130 156 130 Q163 130 164 118 Q168 128 170 124 V112 Z" fill="url(#cg-icing)"/>
+      <ellipse cx="100" cy="110" rx="66" ry="12" fill="#ffd6e4"/>
+      <!-- a little pink kiku on the front -->
+      <g transform="translate(100 156)" fill="#f28fb0">
+        <ellipse rx="2.6" ry="7.5" cy="-7"/><ellipse rx="2.6" ry="7.5" cy="-7" transform="rotate(30)"/><ellipse rx="2.6" ry="7.5" cy="-7" transform="rotate(60)"/>
+        <ellipse rx="2.6" ry="7.5" cy="-7" transform="rotate(90)"/><ellipse rx="2.6" ry="7.5" cy="-7" transform="rotate(120)"/><ellipse rx="2.6" ry="7.5" cy="-7" transform="rotate(150)"/>
+        <ellipse rx="2.6" ry="7.5" cy="-7" transform="rotate(180)"/><ellipse rx="2.6" ry="7.5" cy="-7" transform="rotate(210)"/><ellipse rx="2.6" ry="7.5" cy="-7" transform="rotate(240)"/>
+        <ellipse rx="2.6" ry="7.5" cy="-7" transform="rotate(270)"/><ellipse rx="2.6" ry="7.5" cy="-7" transform="rotate(300)"/><ellipse rx="2.6" ry="7.5" cy="-7" transform="rotate(330)"/>
+        <circle r="3.4" fill="#f0bf4c"/>
+      </g>
+      <!-- candle -->
+      <rect x="93" y="58" width="14" height="54" rx="3" fill="url(#cg-candle)"/>
+      <path d="M93 66 L107 60 M93 78 L107 72 M93 90 L107 84 M93 102 L107 96" stroke="#f28fb0" stroke-width="3.2"/>
+      <ellipse cx="100" cy="111" rx="9" ry="2.5" fill="#e98aaa" opacity="0.5"/>
+      <path d="M100 58 Q99 53 100.5 49" stroke="#3a2a22" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+      <!-- flame -->
+      <g class="flame"><g class="flame-in">
+        <path d="M100 52 C88 46 92 30 100 14 C108 30 112 46 100 52 Z" fill="url(#cg-flame)"/>
+        <path d="M100 50 C95 46 96 38 100 31 C104 38 105 46 100 50 Z" fill="#fffdf4" opacity="0.9"/>
+      </g></g>
+      <g class="smoke"><path d="M100 48 q-6 -10 0 -18 q6 -8 0 -18"/><path d="M101 46 q7 -9 1 -17 q-6 -8 1 -16"/><path d="M99 47 q-4 -12 3 -20"/></g>
+    </svg>
+  </button>
+</div>
+<canvas class="confetti" id="confetti" aria-hidden="true"></canvas>
+
+<script>
+/* ============================================================
+   EDIT THIS PART
+   flowers (27, listed back row first; the last is the big one on top,
+            and it is the flower you watch being drawn)
+     variety: "decorative" | "pompon" | "spider" | "single"
+     colour:  "gold" | "snow" | "blush" | "bronze" | "lavender" | "crimson"
+   paper:  "kraft" | "blush" | "midnight"
+   ribbon: "rose" | "burgundy" | "pink" | "crimson" | "gold" | "ivory"
+   bow:    "loops" (open ribbon loops) | "puffy" (round, full) | "soft" (smooth, closed)
+   board:  "cream" | "sage" | "blush" | "charcoal"   (the card behind the bouquet)
+   message: the words the pen writes under the bouquet at the end (one line; a second line is optional)
+   nicknames: written one after another in pink under the message, then again from the start
+   zoom:   how close the camera follows the pen (1 = no zoom)
+   speed:  1 = normal, 1.5 = faster, 0.8 = slower
+   questions: one of these is asked (at random) before the envelope opens, after a pretend face scan.
+           a: the accepted answers. Capitals and Turkish letters don't matter,
+              so "kürk" also accepts "Kürk", "kurk" and "KURK". Empty list = no questions.
+           contains: (optional) any answer containing one of these words also counts.
+           replies: a funny line for a particular wrong answer.  hints: shown after N wrong tries.
+   ============================================================ */
+const CONFIG = {
+  // asked after the right answer: "no" runs away from the mouse / finger. Set to null to skip.
+  yesno: {
+    q: "Talha harika ve mükemmel bir insan. Onun sayesinde hayat şu sıralar daha güzel.",
+    yes: "Evet",
+    no: "Hayır",
+  },
+  questions: [
+    {
+      q: "Beniz'in giymeyi en sevdiği kumaş türü nedir?",
+      a: ["kürk"],
+      // funny replies to particular wrong answers
+      replies: {
+        "ipek":   "İpek mi? Zarif tahmin ama hayır",
+        "pamuk":  "Pamuk mu? Biraz daha lüks düşün",
+        "deri":   "Deri değil… ama yaklaştın",
+        "kadife": "Kadife şık ama o değil",
+        "yün":    "Yün sıcak tutar ama o değil",
+        "saten":  "Saten mi? Fazla kaygan bir cevap",
+        "kot":    "Kot mu?! Sistem bayıldı",
+        "keten":  "Keten mi? Yaz kızı değil bu",
+      },
+      // hints that show up after this many wrong tries
+      hints: { 2: "İpucu: kışın giyilir", 3: "İpucu: yumuşacık ve çok havalı", 4: "İpucu: k _ _ k", 6: "İpucu: k ü _ k", 8: "Tamam, pes ettim: cevap “kürk”" },
+    },
+    {
+      q: "Beniz'e göre “rezil, perişan durumda olmak” nasıl tarif edilir?",
+      a: ["sefillik", "sefalet", "sefil", "sefil olmak", "sefalet içinde olmak", "sefil düşmek", "sefiller"],
+      contains: ["sefil", "sefal"],   // any answer with one of these in it also counts
+      replies: {
+        "rezil":   "Kopya çekmek yasak hanımefendi",
+        "perişan": "Soruyu bana geri mi veriyorsun?",
+        "berbat":  "Berbat değil, biraz daha edebi düşün",
+        "fakir":   "Yaklaştın ama daha dramatik olsun",
+        "fakirlik": "Yaklaştın ama daha dramatik olsun",
+        "yoksul":  "Yoksul değil, daha Victor Hugo'vari olsun",
+        "mahvolmak": "Mahvolmak mı? Neredeyse… ama o değil",
+      },
+      hints: { 2: "İpucu: Victor Hugo bunun hakkında koca bir roman yazdı", 3: "İpucu: S harfiyle başlar", 4: "İpucu: s _ f _ l", 6: "İpucu: Les Misérables = … ler", 8: "Tamam, pes ettim: cevap “sefil”" },
+    },
+    {
+      q: "Beniz'in favori adliyesi hangisidir?",
+      a: ["çağlayan", "istanbul adliyesi"],
+      contains: ["çağlayan"],   // "Çağlayan Adliyesi" also counts
+      replies: {
+        "kartal":    "Kartal mı? Yanlış yaka hanımefendi",
+        "anadolu":   "Anadolu yakası değil, karşıya geç",
+        "bakırköy":  "Bakırköy mü? Yanlış adliye, yanlış koridor",
+        "gaziosmanpaşa": "Yaklaştın ama o değil",
+        "büyükçekmece": "Fazla uzağa gittin",
+        "ankara":    "Ankara mı? İstanbul'dan çıkmayalım",
+      },
+      hints: { 2: "İpucu: İstanbul Adliyesi olarak da bilinir", 3: "İpucu: Kağıthane'de", 4: "İpucu: ç _ ğ _ _ y _ n", 6: "İpucu: ç a ğ l _ y a n", 8: "Tamam, pes ettim: cevap “Çağlayan”" },
+    },
+    {
+      q: "Beniz'in en sevdiği sos nedir?",
+      a: ["trüf", "trüf sos", "trüf mantarı", "trüflü sos", "trüf mantarlı sos"],
+      contains: ["trüf"],   // "Trüflü mayonez" etc. also counts
+      replies: {
+        "ketçap":   "Ketçap mı? Hanımefendiye yakışmadı",
+        "mayonez":  "Mayonez mi? Biraz daha lüks düşün",
+        "hardal":   "Hardal değil, daha asil bir şey",
+        "barbekü":  "Barbekü mü? Mangal partisi değil bu",
+        "pesto":    "Pesto şık ama o değil",
+        "ranch":    "Ranch mı? Amerika'ya gitmeyelim",
+        "acı sos":  "Acı değil, daha zarif bir tat",
+        "soya":     "Soya mı? Yanlış mutfak",
+        "mantar":   "Çok yaklaştın… ama hangi mantar?",
+      },
+      hints: { 2: "İpucu: İtalyan mutfağının en pahalı lezzetlerinden", 3: "İpucu: toprağın altında bulunur, domuzlar arar", 4: "İpucu: t _ _ f", 6: "İpucu: t r _ f", 8: "Tamam, pes ettim: cevap “trüf”" },
+    },
+    {
+      q: "Beniz'in favori fast food'u nedir?",
+      a: ["hamburger", "burger"],
+      contains: ["burger"],   // "cheeseburger", "Hamburger menü" etc. also count
+      replies: {
+        "pizza":     "Pizza mı? İtalya'ya fazla takıldık",
+        "döner":     "Döner mi? Yerli ve milli ama o değil",
+        "tavuk":     "Tavuk mu? Biraz daha dolgun düşün",
+        "nugget":    "Nugget mı? Çocuk menüsü değil bu",
+        "patates":   "Patates yanında gelir, asıl yıldız o değil",
+        "hot dog":   "Hot dog mu? Sosis değil, daha büyük düşün",
+        "sosisli":   "Sosisli mi? Sosis değil, daha büyük düşün",
+        "taco":      "Taco mu? Meksika'ya gitmeyelim",
+        "lahmacun":  "Lahmacun mu? Yaklaşmadın bile",
+        "tost":      "Tost mu? İki ekmek arası ama o değil",
+        "köfte":     "Çok yaklaştın… ama ekmek arasında, Amerikan usulü",
+      },
+      hints: { 2: "İpucu: iki ekmek arasında, Amerikan usulü", 3: "İpucu: içinde köfte, peynir, marul var", 4: "İpucu: h _ _ b _ _ g _ _", 6: "İpucu: h a m b _ r g e r", 8: "Tamam, pes ettim: cevap “hamburger”" },
+    },
+  ],
+  flowers: [
+    { variety: "pompon",     colour: "gold" },
+    { variety: "single",     colour: "snow" },
+    { variety: "pompon",     colour: "blush" },
+    { variety: "decorative", colour: "bronze" },
+    { variety: "pompon",     colour: "lavender" },
+    { variety: "single",     colour: "crimson" },
+    { variety: "pompon",     colour: "snow" },
+    { variety: "pompon",     colour: "lavender" },
+    { variety: "pompon",     colour: "bronze" },
+    { variety: "single",     colour: "snow" },
+    { variety: "pompon",     colour: "blush" },
+    { variety: "decorative", colour: "crimson" },
+    { variety: "single",     colour: "gold" },
+    { variety: "pompon",     colour: "snow" },
+    { variety: "decorative", colour: "lavender" },
+    { variety: "pompon",     colour: "bronze" },
+    { variety: "single",     colour: "blush" },
+    { variety: "decorative", colour: "lavender" },
+    { variety: "pompon",     colour: "gold" },
+    { variety: "decorative", colour: "bronze" },
+    { variety: "single",     colour: "lavender" },
+    { variety: "pompon",     colour: "crimson" },
+    { variety: "decorative", colour: "gold" },
+    { variety: "decorative", colour: "snow" },
+    { variety: "pompon",     colour: "crimson" },
+    { variety: "single",     colour: "lavender" },
+    { variety: "decorative", colour: "blush" }   // the big one on top: the flower you watch being drawn
+  ],
+  paper: "kraft",
+  ribbon: "rose",
+  bow: "loops",
+  board: "cream",
+  message: ["Doğum günün kutlu olsun"],
+  nicknames: ["Kürk prensesi", "Altın küre", "Şans meleği", "Avukat hanım", "Balkabağı"],
+  // the little planet in the corner that leads back to the main page; always on the screen. null = no button
+  home: { href: "../index.html" },
+  // the wish cake: shows up right after the envelope opens, before the flower. Blow into the mic, or tap the candle.
+  // mic: false = tap only (no microphone permission is asked). Set cake to null to skip it.
+  cake: {
+    wish: "Bir dilek tut ve mumu üfle",
+    done: "Dileğin kabul olsun",
+    mic: true,
+  },
+  zoom: 2.0,
+  speed: 1
+};
+
+(() => {
+  const GA = Math.PI * (3 - Math.sqrt(5));          // golden angle: how real flower heads pack their petals
+  const LIGHT = -2.35;                               // light comes from the upper left
+  const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  const COLOURS = { // HSL: petal base (near the centre) and petal tip
+    gold:     { base: [32, 90, 38],  tip: [48, 98, 70] },
+    snow:     { base: [78, 30, 66],  tip: [46, 70, 97] },
+    blush:    { base: [336, 64, 44], tip: [348, 90, 86] },
+    bronze:   { base: [12, 74, 30],  tip: [30, 90, 64] },
+    lavender: { base: [276, 42, 40], tip: [266, 66, 86] },
+    crimson:  { base: [348, 76, 26], tip: [4, 80, 58] }
+  };
+  const PAPERS = {
+    kraft:    { front: ["hsl(34 44% 60%)", "hsl(27 38% 38%)"], back: ["hsl(38 36% 84%)", "hsl(30 26% 64%)"] },
+    blush:    { front: ["hsl(350 46% 80%)", "hsl(344 34% 56%)"], back: ["hsl(32 44% 93%)", "hsl(24 24% 74%)"] },
+    midnight: { front: ["hsl(226 30% 34%)", "hsl(230 34% 17%)"], back: ["hsl(42 50% 86%)", "hsl(36 30% 66%)"] }
+  };
+  const RIBBONS = {
+    rose:     ["hsl(338 52% 56%)", "hsl(346 92% 88%)"],
+    burgundy: ["hsl(347 72% 17%)", "hsl(349 52% 40%)"],
+    pink:    ["hsl(336 52% 38%)", "hsl(342 78% 70%)"],
+    crimson: ["hsl(352 72% 28%)", "hsl(356 80% 52%)"],
+    gold:    ["hsl(36 80% 34%)", "hsl(46 92% 64%)"],
+    ivory:   ["hsl(38 24% 66%)", "hsl(44 50% 95%)"]
+  };
+
+  // Where each flower head sits, in bouquet units: [x, y, radius]. Back row first, the big centre flower last.
+  const SLOTS = [
+    [-0.63, -0.12, 0.095], [0.59, -0.25, 0.09], [0.05, -0.22, 0.085], [-0.05, -0.23, 0.085],
+    [-0.41, 0.3, 0.085], [0.41, 0.3, 0.085], [0.02, 0.3, 0.085],
+    [-0.13, -0.43, 0.11], [0.14, -0.43, 0.11], [-0.43, -0.27, 0.13], [0.44, -0.28, 0.13],
+    [-0.54, 0.12, 0.12], [0.55, 0.1, 0.12],
+    [-0.3, -0.1, 0.12], [0.31, -0.12, 0.12], [-0.24, 0.05, 0.11], [0.25, 0.04, 0.11],
+    [0.0, 0.02, 0.21], [-0.22, -0.26, 0.16], [0.22, -0.27, 0.16],
+    [-0.44, -0.06, 0.15], [0.45, -0.08, 0.15], [-0.33, 0.16, 0.16], [0.34, 0.16, 0.16],
+    [-0.17, 0.25, 0.12], [0.18, 0.26, 0.12],
+    [0.0, -0.42, 0.23]
+  ];
+  const LEAF_PLAN = [
+    { stem: 20, side: -1, up: 0.07 }, { stem: 21, side: 1, up: 0.05 }
+  ];
+
+  // Drawing timeline, in seconds
+  const BOW = 1.6;    // ribbon bow size (1 = the original)
+  const RIB_UP = 0.15; // how far the ribbon sits above its original place (0 = the original)
+  const STEM_T = 0.55, LEAF_T = 0.5, VEIN_T = 0.18, BACK_T = 1.2, WRAP_T = 1.5, CREASE_T = 0.3, RIB_T = 0.3;
+
+  const canvas = document.getElementById("sky");
+  const ctx = canvas.getContext("2d");
+  let W = 0, H = 0, DPR = 1, stars = [], bokeh = [], grain = null;
+  let bouquet = null, geom = null, lastNib = null;
+  const cam = { x: 0, y: 0, z: 1, ready: false };
+  const speed = Math.max(0.2, CONFIG.speed || 1);
+
+  // ---------- helpers ----------
+  function rng(a) {
+    return function () {
+      a |= 0; a = (a + 0x6d2b79f5) | 0;
+      let t = Math.imul(a ^ (a >>> 15), 1 | a);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+  const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+  const easeOut = k => 1 - Math.pow(1 - k, 3);
+  const easeInOut = k => (k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2);
+  const hsl = (h, s, l, a = 1) => `hsl(${h} ${s}% ${l}% / ${a})`;
+  const lerp = (a, b, t) => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t];
+
+  const BOARDS = { cream: "#e7dfd2", sage: "#d5dccf", blush: "#ecd9d3", charcoal: "#34312e" };
+  const BOARD = BOARDS[CONFIG.board] || BOARDS.cream;
+  document.documentElement.style.setProperty("--board", BOARD);
+  const INK = a => `rgba(246,228,176,${a})`;   // pale gold ink on the dark sheet
+  const WASH = "hsl(224 40% 14%)";             // inked shapes are filled with background colour so lines underneath are hidden
+  const lineW = R => Math.max(0.8, R * 0.006);
+
+  function withCum(pts) {
+    const cum = [0];
+    for (let i = 1; i < pts.length; i++) cum.push(cum[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]));
+    return { pts, cum, len: cum[cum.length - 1] };
+  }
+  function sampleLine(p0, p1, n, out) { for (let i = 1; i <= n; i++) out.push(lerp(p0, p1, i / n)); return out; }
+  function sampleQuad(p0, p1, p2, n, out) {
+    for (let i = 1; i <= n; i++) {
+      const t = i / n, u = 1 - t;
+      out.push([u * u * p0[0] + 2 * u * t * p1[0] + t * t * p2[0], u * u * p0[1] + 2 * u * t * p1[1] + t * t * p2[1]]);
+    }
+    return out;
+  }
+  function sampleCubic(p0, p1, p2, p3, n, out) {
+    for (let i = 1; i <= n; i++) {
+      const t = i / n, u = 1 - t;
+      out.push([
+        u * u * u * p0[0] + 3 * u * u * t * p1[0] + 3 * u * t * t * p2[0] + t * t * t * p3[0],
+        u * u * u * p0[1] + 3 * u * u * t * p1[1] + 3 * u * t * t * p2[1] + t * t * t * p3[1]
+      ]);
+    }
+    return out;
+  }
+  // Builds the path up to distance d along the line and returns where the pen is
+  function traceTo(c, line, d) {
+    const { pts, cum } = line;
+    c.beginPath(); c.moveTo(pts[0][0], pts[0][1]);
+    for (let i = 1; i < pts.length; i++) {
+      if (cum[i] >= d) {
+        const q = (d - cum[i - 1]) / (cum[i] - cum[i - 1] || 1);
+        const x = pts[i - 1][0] + (pts[i][0] - pts[i - 1][0]) * q;
+        const y = pts[i - 1][1] + (pts[i][1] - pts[i - 1][1]) * q;
+        c.lineTo(x, y);
+        return [x, y];
+      }
+      c.lineTo(pts[i][0], pts[i][1]);
+    }
+    return pts[pts.length - 1];
+  }
+  function polyPath(c, pts, close) {
+    c.beginPath();
+    pts.forEach(([x, y], i) => (i ? c.lineTo(x, y) : c.moveTo(x, y)));
+    if (close) c.closePath();
+  }
+  // Fresh ink glows a little while the pen is on it
+  function inkStroke(c, width, wet) {
+    c.strokeStyle = INK(1); c.lineWidth = width;
+    if (wet) { c.shadowColor = "rgba(255,210,120,0.75)"; c.shadowBlur = 7 * DPR; }
+    c.stroke();
+    c.shadowBlur = 0; c.shadowColor = "transparent";
+  }
+  // An outline the pen traces; once traced it is filled with background colour until its own colour arrives (a)
+  function inkShape(c, line, age, start, dur, a, lw) {
+    const k = clamp((age - start) / dur, 0, 1);
+    if (!k) return null;
+    if (k < 1) { const e = traceTo(c, line, easeOut(k) * line.len); inkStroke(c, lw, true); return e; }
+    if (a < 1) {
+      polyPath(c, line.pts, true);
+      c.fillStyle = WASH; c.fill();
+      c.strokeStyle = INK(0.85 * (1 - a)); c.lineWidth = lw; c.stroke();
+    }
+    return null;
+  }
+  // An open line the pen traces (creases, veins)
+  function inkLine(c, line, age, start, dur, a, lw) {
+    const k = clamp((age - start) / dur, 0, 1);
+    if (!k) return null;
+    const e = traceTo(c, line, easeOut(k) * line.len);
+    if (k < 1) { inkStroke(c, lw, true); return e; }
+    if (a < 1) { c.strokeStyle = INK(0.85 * (1 - a)); c.lineWidth = lw; c.stroke(); }
+    return null;
+  }
+  function drawNib(c, x, y) { // the glowing pen tip, kept the same size on screen whatever the zoom
+    const s = 1 / cam.z;
+    const g = c.createRadialGradient(x, y, 0, x, y, 18 * s);
+    g.addColorStop(0, "rgba(255,246,222,1)");
+    g.addColorStop(0.3, "rgba(255,214,120,0.5)");
+    g.addColorStop(1, "rgba(255,214,120,0)");
+    c.fillStyle = g; c.beginPath(); c.arc(x, y, 18 * s, 0, Math.PI * 2); c.fill();
+    c.fillStyle = "#fffaf0"; c.beginPath(); c.arc(x, y, 2.4 * s, 0, Math.PI * 2); c.fill();
+  }
+  // Points shifted sideways from a line (positive = to the right of the direction of travel)
+  function offsetPts(pts, upto, d) {
+    const out = [];
+    for (let i = 0; i <= upto; i++) {
+      const a = pts[Math.max(0, i - 1)], b = pts[Math.min(pts.length - 1, i + 1)];
+      const tx = b[0] - a[0], ty = b[1] - a[1], m = Math.hypot(tx, ty) || 1, dd = d(i);
+      out.push([pts[i][0] - (ty / m) * dd, pts[i][1] + (tx / m) * dd]);
+    }
+    return out;
+  }
+
+  // ---------- flower head ----------
+  function tint(col, t, r) {
+    const jh = (r() - 0.5) * 8, jl = (r() - 0.5) * 7;
+    const bh = col.base[0] + jh, bs = col.base[1], bl = clamp(col.base[2] * (0.72 + 0.28 * t) + jl, 4, 95);
+    const th = col.tip[0] + jh, ts = col.tip[1], tl = clamp(col.tip[2] - (1 - t) * 16 + jl, 5, 98);
+    const mh = bh + ((((th - bh) % 360) + 540) % 360 - 180) / 2; // halfway round the colour wheel the short way
+    return { base: hsl(bh, bs, bl), mid: hsl(mh, (bs + ts) / 2, (bl + tl) / 2 + 5), tip: hsl(th, ts, tl) };
+  }
+
+  function makePetals(v, r, col, density) {
+    const P = [];
+    const add = (t, angle, len, w) => P.push({
+      t, angle, len, w, curl: r() < 0.5 ? -1 : 1, bend: (r() - 0.5) * 0.9, ...tint(col, t, r),
+      lit: Math.cos(angle - LIGHT) * (0.35 + 0.65 * t), cosA: Math.cos(angle), sinA: Math.sin(angle)
+    });
+    const count = n => Math.max(24, Math.round(n * density));
+    if (v === "decorative") {
+      const N = count(210);
+      for (let i = 0; i < N; i++) {
+        const t = i / (N - 1);
+        add(t, i * GA + (r() - 0.5) * 0.08, (0.18 + 0.82 * Math.pow(t, 0.7)) * (0.93 + r() * 0.1),
+            (0.038 + 0.045 * t + r() * 0.01) * Math.pow(1 / density, 0.35));
+      }
+    } else if (v === "pompon") {
+      const N = count(260);
+      for (let i = 0; i < N; i++) {
+        const t = i / (N - 1);
+        add(t, i * GA + (r() - 0.5) * 0.06, (0.2 + 0.8 * Math.pow(t, 0.5)) * (0.95 + r() * 0.07),
+            (0.07 + 0.04 * t) * Math.pow(1 / density, 0.35));
+      }
+    } else if (v === "spider") {
+      const N = count(100);
+      for (let i = 0; i < N; i++) {
+        const t = i / (N - 1);
+        add(t, i * GA + (r() - 0.5) * 0.1, (0.18 + 0.82 * Math.pow(t, 0.6)) * (0.9 + r() * 0.15), 0.016 + 0.012 * t);
+      }
+    } else { // single
+      const N = 30;
+      for (let i = 0; i < N; i++) add(1, (i / N) * Math.PI * 2 + (r() - 0.5) * 0.05, 0.95 + r() * 0.08, 0.09);
+    }
+    P.sort((a, b) => b.len - a.len); // outer petals first, inner ones drawn on top
+    // Pen order: ring by ring from the outside in, sweeping around each ring
+    const bands = v === "single" ? 1 : 6, TAU = Math.PI * 2;
+    const band = p => Math.min(bands - 1, Math.floor((1 - p.t) * bands));
+    const ang = p => ((p.angle % TAU) + TAU) % TAU;
+    [...P].sort((a, b) => band(a) - band(b) || (band(a) % 2 ? ang(b) - ang(a) : ang(a) - ang(b)))
+      .forEach((p, i) => { p.tr = i; Object.assign(p, samplePetal(v, p)); });
+    return P;
+  }
+
+  function makeHead(variety, colour, seed, sketchSec, density) {
+    const col = COLOURS[colour] || COLOURS.gold;
+    const petals = makePetals(variety, rng(seed), col, density);
+    const N = petals.length, f = { variety, col, petals, cache: null, cacheKey: "" };
+    f.td = 0.4;                                        // seconds the pen spends on one petal
+    f.gap = (sketchSec - f.td) / Math.max(1, N - 1);   // the next petal starts after this long
+    f.sketchEnd = (N - 1) * f.gap + f.td + (variety === "single" ? 0.7 : 0);
+    f.cgap = 1.6 / N; f.cd = 0.8;
+    return f; // start, cStart and total are set by the bouquet timeline
+  }
+
+  function petalSegs(kind, L, w, curl, bend) {
+    let segs;
+    if (kind === "spider") segs = [
+      ["M", L * 0.05, 0],
+      ["C", L * 0.5, 0, L * 0.85, curl * L * 0.02, L * 0.95, curl * L * 0.09],
+      ["Q", L * 1.0, curl * L * 0.17, L * 0.89, curl * L * 0.16]
+    ];
+    else if (kind === "pompon") segs = [
+      ["M", 0, 0],
+      ["C", L * 0.2, -w * 0.6, L * 0.55, -w * 1.1, L * 0.85, -w * 0.9],
+      ["Q", L * 1.02, -w * 0.55, L, 0],
+      ["Q", L * 1.02, w * 0.55, L * 0.85, w * 0.9],
+      ["C", L * 0.55, w * 1.1, L * 0.2, w * 0.6, 0, 0]
+    ];
+    else segs = [ // decorative + single: strap petal with a small notched tip
+      ["M", 0, 0],
+      ["C", L * 0.22, -w * 0.95, L * 0.72, -w * 1.08, L * 0.96, -w * 0.5],
+      ["Q", L * 1.0, -w * 0.25, L * 0.955, -w * 0.08],
+      ["L", L * 0.92, 0],
+      ["Q", L * 1.0, w * 0.25, L * 0.96, w * 0.5],
+      ["C", L * 0.72, w * 1.08, L * 0.22, w * 0.95, 0, 0]
+    ];
+    if (bend && kind !== "spider") { // a gentle sideways curve, stronger toward the tip
+      const k = (bend * 0.12) / (L || 1);
+      for (const s of segs) for (let i = 1; i < s.length; i += 2) s[i + 1] += k * s[i] * s[i];
+    }
+    return segs;
+  }
+  const bendY = (p, L, x) => (p.bend * 0.12 * x * x) / (L || 1);
+  function petalPath(c, kind, L, w, p) {
+    c.beginPath();
+    for (const s of petalSegs(kind, L, w, p.curl, p.bend)) {
+      if (s[0] === "M") c.moveTo(s[1], s[2]);
+      else if (s[0] === "L") c.lineTo(s[1], s[2]);
+      else if (s[0] === "Q") c.quadraticCurveTo(s[1], s[2], s[3], s[4]);
+      else c.bezierCurveTo(s[1], s[2], s[3], s[4], s[5], s[6]);
+    }
+  }
+  function samplePetal(kind, p) {
+    const pts = [];
+    let x = 0, y = 0;
+    for (const s of petalSegs(kind, p.len, p.w, p.curl, p.bend)) {
+      if (s[0] === "M" || s[0] === "L") { x = s[1]; y = s[2]; pts.push([x, y]); continue; }
+      if (s[0] === "Q") sampleQuad([x, y], [s[1], s[2]], [s[3], s[4]], 7, pts);
+      else sampleCubic([x, y], [s[1], s[2]], [s[3], s[4]], [s[5], s[6]], 12, pts);
+      [x, y] = pts[pts.length - 1];
+    }
+    const line = withCum(pts);
+    return { pts, cum: line.cum, plen: line.len };
+  }
+
+  // A finished, painted petal: contact shadow, colour along its length, rounded
+  // cross-section, light from the upper left, darker where it tucks into the head
+  function paintPetal(c, kind, p, L, w, so) {
+    c.save(); c.translate(so[0], so[1]);
+    petalPath(c, kind, L, w, p);
+    if (kind === "spider") { c.strokeStyle = "rgba(8,4,18,0.25)"; c.lineWidth = Math.max(1, w * 2.6); c.lineCap = "round"; c.stroke(); }
+    else { c.fillStyle = "rgba(8,4,18,0.26)"; c.fill(); }
+    c.restore();
+
+    const body = c.createLinearGradient(0, 0, L, 0);
+    body.addColorStop(0, p.base); body.addColorStop(0.55, p.mid); body.addColorStop(1, p.tip);
+    petalPath(c, kind, L, w, p);
+    if (kind === "spider") {
+      c.lineCap = "round";
+      c.strokeStyle = body; c.lineWidth = Math.max(1, w * 2); c.stroke();
+      c.strokeStyle = `rgba(255,250,235,${0.12 + 0.12 * Math.max(0, p.lit)})`; c.lineWidth = Math.max(0.5, w * 0.6); c.stroke();
+      return;
+    }
+    c.fillStyle = body; c.fill();
+
+    const cross = c.createLinearGradient(0, -w, 0, w);
+    cross.addColorStop(0, "rgba(25,8,20,0.30)");
+    cross.addColorStop(0.42, "rgba(255,255,255,0.10)");
+    cross.addColorStop(0.58, "rgba(255,255,255,0.10)");
+    cross.addColorStop(1, "rgba(25,8,20,0.36)");
+    c.fillStyle = cross; c.fill();
+
+    c.fillStyle = p.lit > 0 ? `rgba(255,250,232,${0.16 * p.lit})` : `rgba(12,6,28,${-0.24 * p.lit})`;
+    c.fill();
+
+    const occ = c.createLinearGradient(0, 0, L * 0.5, 0);
+    occ.addColorStop(0, "rgba(18,6,12,0.5)"); occ.addColorStop(1, "rgba(18,6,12,0)");
+    c.fillStyle = occ; c.fill();
+
+    c.strokeStyle = "rgba(45,20,10,0.24)"; c.lineWidth = 0.6; c.stroke();
+    if (kind === "pompon") { // spoon-shaped petals catch a light rim at the tip
+      c.strokeStyle = `rgba(255,250,235,${0.12 + 0.1 * Math.max(0, p.lit)})`; c.lineWidth = 0.8; c.stroke();
+    } else if (L > 10) { // a soft ridge down the middle
+      c.beginPath();
+      c.moveTo(L * 0.14, bendY(p, L, L * 0.14));
+      c.quadraticCurveTo(L * 0.5, bendY(p, L, L * 0.5), L * 0.84, bendY(p, L, L * 0.84));
+      c.strokeStyle = `rgba(255,252,240,${0.14 + 0.1 * Math.max(0, p.lit)})`;
+      c.lineWidth = Math.max(0.6, w * 0.14); c.lineCap = "round"; c.stroke();
+    }
+  }
+
+  // The pen traces every petal outline, then colour flows in from base to tip, petal by petal.
+  // Returns where the pen is (in the caller's coordinates), or null.
+  function drawHead(c, f, age, x, y, R, showNib = true) {
+    if (age <= 0) return null;
+    c.save();
+    c.translate(x, y);
+    const lw = lineW(R);
+    c.lineCap = "round"; c.lineJoin = "round";
+
+    const ks = clamp((age - f.cStart) / 1.4, 0, 1); // soft shadow the head casts on what is behind it
+    if (ks > 0) {
+      const s = R * 1.12 * easeOut(ks) + 1;
+      const g = c.createRadialGradient(R * 0.08, R * 0.12, R * 0.3, R * 0.08, R * 0.12, s);
+      g.addColorStop(0, "rgba(3,5,15,0.36)");
+      g.addColorStop(1, "rgba(3,5,15,0)");
+      c.fillStyle = g;
+      c.beginPath(); c.arc(R * 0.08, R * 0.12, s, 0, Math.PI * 2); c.fill();
+    }
+
+    const dx = R * 0.016, dy = R * 0.028; // petal shadow offset, down and to the right
+    let nib = null, nibTr = -1;
+    for (const p of f.petals) {
+      const k = clamp((age - p.tr * f.gap) / f.td, 0, 1);
+      if (!k) continue;
+      const a = easeOut(clamp((age - f.cStart - p.tr * f.cgap) / f.cd, 0, 1));
+      const L = R * p.len, w = R * p.w;
+      c.save();
+      c.rotate(p.angle);
+      if (k < 1) {
+        const scaled = { pts: p.pts.map(([u, v]) => [u * R, v * R]), cum: p.cum.map(d => d * R) };
+        const [ex, ey] = traceTo(c, scaled, easeOut(k) * p.plen * R);
+        inkStroke(c, lw * 1.3, true);
+        if (p.tr > nibTr) { nibTr = p.tr; nib = [ex * p.cosA - ey * p.sinA, ex * p.sinA + ey * p.cosA]; }
+      } else {
+        if (a < 1) {
+          petalPath(c, f.variety, L, w, p);
+          if (f.variety !== "spider") { c.fillStyle = WASH; c.fill(); }
+          c.strokeStyle = INK(0.85 * (1 - a)); c.lineWidth = lw; c.stroke();
+        }
+        if (a > 0) {
+          c.save();
+          if (a < 1) { c.beginPath(); c.rect(-R * 0.05, -L - R * 0.1, (L * 1.1 + R * 0.05) * a, 2 * L + R * 0.2); c.clip(); }
+          paintPetal(c, f.variety, p, L, w, [dx * p.cosA + dy * p.sinA, -dx * p.sinA + dy * p.cosA]);
+          c.restore();
+        }
+      }
+      c.restore();
+    }
+
+    const e = easeOut(clamp((age - f.cStart - 1.2) / 1, 0, 1));
+    if (f.variety === "single") { // golden disc of tiny florets
+      if (e > 0) {
+        const dg = c.createRadialGradient(-R * 0.05, -R * 0.06, 0, 0, 0, R * 0.23);
+        dg.addColorStop(0, "hsl(52 70% 40%)"); dg.addColorStop(1, "hsl(36 70% 16%)");
+        c.globalAlpha = e;
+        c.fillStyle = "rgba(3,5,15,0.4)"; c.beginPath(); c.arc(R * 0.02, R * 0.03, R * 0.235, 0, Math.PI * 2); c.fill();
+        c.fillStyle = dg; c.beginPath(); c.arc(0, 0, R * 0.22, 0, Math.PI * 2); c.fill();
+        const n = 120;
+        for (let i = 0; i < n; i++) {
+          const q = i / n, rr = R * 0.2 * Math.sqrt((i + 0.5) / n), an = i * GA;
+          const fx = Math.cos(an) * rr, fy = Math.sin(an) * rr, lit = 1 - (fx + fy) / (R * 0.4);
+          c.fillStyle = hsl(72 - 30 * q, 72, clamp(26 + 26 * q + 8 * lit, 10, 80));
+          c.beginPath(); c.arc(fx, fy, R * 0.018, 0, Math.PI * 2); c.fill();
+        }
+        c.globalAlpha = 1;
+      }
+      const sketched = f.sketchEnd - 0.7;
+      if (age < f.cStart + 1) { // the pen circles the centre before colour arrives
+        const k = easeOut(clamp((age - sketched) / 0.6, 0, 1));
+        const fade = 1 - clamp((age - f.cStart) / 1, 0, 1);
+        if (k > 0) {
+          c.beginPath(); c.arc(0, 0, R * 0.21, -Math.PI / 2, -Math.PI / 2 + k * Math.PI * 2);
+          c.strokeStyle = INK(0.9 * fade); c.lineWidth = lw; c.stroke();
+          if (k < 1) { const an = -Math.PI / 2 + k * Math.PI * 2; nib = [Math.cos(an) * R * 0.21, Math.sin(an) * R * 0.21]; }
+        }
+      }
+    } else if (e > 0 && f.variety !== "spider") { // tightly curled, unopened petals in the very centre
+      const [h, s, l] = f.col.base;
+      c.globalAlpha = e;
+      const cg = c.createRadialGradient(-R * 0.02, -R * 0.03, 0, 0, 0, R * 0.08);
+      cg.addColorStop(0, hsl(h + 10, s, l + 18)); cg.addColorStop(1, hsl(h - 4, s, l - 12));
+      c.fillStyle = cg; c.beginPath(); c.arc(0, 0, R * 0.075, 0, Math.PI * 2); c.fill();
+      for (let i = 0; i < 22; i++) {
+        const an = i * GA, rr = R * 0.062 * Math.sqrt((i + 0.5) / 22);
+        c.beginPath(); c.arc(Math.cos(an) * rr, Math.sin(an) * rr, R * 0.016, an + 0.6, an + 0.6 + Math.PI * 1.3);
+        c.strokeStyle = hsl(f.col.tip[0], f.col.tip[1], f.col.tip[2] - 8, 0.8);
+        c.lineWidth = Math.max(0.6, R * 0.006); c.stroke();
+      }
+      c.globalAlpha = 1;
+    }
+    if (nib && showNib) drawNib(c, nib[0], nib[1]);
+    c.restore();
+    return nib ? [x + nib[0], y + nib[1]] : null;
+  }
+
+  // Once a head is finished, draw it once into its own canvas (a little sharper than needed) and reuse that
+  function headImage(f, R) {
+    const q = DPR * 1.5, key = R + "@" + q;
+    if (f.cache && f.cacheKey === key) return f.cache;
+    const S = Math.ceil(R * 2.6 * q);
+    const oc = document.createElement("canvas");
+    oc.width = oc.height = S;
+    const o = oc.getContext("2d");
+    o.setTransform(q, 0, 0, q, 0, 0);
+    drawHead(o, f, Infinity, R * 1.3, R * 1.3, R, false);
+    f.cache = oc; f.cacheKey = key;
+    return oc;
+  }
+
+  // ---------- leaves ----------
+  // Chrysanthemum leaf: deeply lobed with small teeth along the edge; the two sides differ a little
+  function leafHalfWidth(s, phase) {
+    const lobes = 0.52 + 0.48 * Math.pow(Math.abs(Math.cos(3 * Math.PI * s + phase)), 0.6);
+    const teeth = 1 + 0.08 * ((s * 17 + phase * 3) % 1);
+    return 0.31 * Math.pow(Math.sin(Math.PI * s), 0.75) * lobes * teeth;
+  }
+  const LEAF = (() => {
+    const top = [], bot = [], n = 70;
+    for (let i = 0; i <= n; i++) {
+      const s = i / n;
+      top.push([s, -leafHalfWidth(s, 0)]);
+      bot.push([s, leafHalfWidth(s, 0.35)]);
+    }
+    return { outline: [...top, ...bot.reverse().slice(1)], top };
+  })();
+
+  function leafFrame(lf, stem, i, U) {
+    const [ax, ay] = stem.pts[i], a0 = stem.pts[i - 1], a1 = stem.pts[i + 1];
+    const ang = Math.atan2(a1[1] - a0[1], a1[0] - a0[0]) + lf.side * lf.tilt;
+    const Lp = U * lf.len, cs = Math.cos(ang), sn = Math.sin(ang);
+    const map = ([u, v]) => { v *= lf.side; return [ax + (u * cs - v * sn) * Lp, ay + (u * sn + v * cs) * Lp]; };
+    return {
+      map, Lp,
+      outline: withCum(LEAF.outline.map(map)),
+      vein: withCum([[0.03, 0], [0.5, 0], [0.93, 0]].map(map)),
+      from: [ax, ay], tip: map([1, 0])
+    };
+  }
+
+  function paintLeaf(c, F, g) {
+    const { map } = F, s0 = F.Lp * 0.06;
+    c.save();
+    if (g < 1) { // green flows from the stem out to the tip
+      polyPath(c, [map([-0.05, -0.6]), map([g * 1.08, -0.6]), map([g * 1.08, 0.6]), map([-0.05, 0.6])], true);
+      c.clip();
+    }
+    c.save(); c.translate(s0 * 0.5, s0);
+    polyPath(c, F.outline.pts, true); c.fillStyle = "rgba(3,6,14,0.35)"; c.fill();
+    c.restore();
+
+    polyPath(c, F.outline.pts, true);
+    const gr = c.createLinearGradient(F.from[0], F.from[1], F.tip[0], F.tip[1]);
+    gr.addColorStop(0, "hsl(112 40% 15%)"); gr.addColorStop(0.6, "hsl(100 42% 27%)"); gr.addColorStop(1, "hsl(92 45% 34%)");
+    c.fillStyle = gr; c.fill();
+    c.strokeStyle = "rgba(4,18,6,0.55)"; c.lineWidth = 0.8; c.stroke();
+
+    const half = LEAF.top.map(map).concat([map([1, 0]), map([0, 0])]); // one half turned slightly away from the light
+    polyPath(c, half, true); c.fillStyle = "rgba(0,14,6,0.3)"; c.fill();
+
+    c.lineCap = "round";
+    for (const s of [0.16, 0.32, 0.48, 0.64, 0.8]) { // side veins
+      for (const side of [-1, 1]) {
+        const s2 = Math.min(0.95, s + 0.11), hw = leafHalfWidth(s2, side < 0 ? 0 : 0.35) * 0.72 * side;
+        const a = map([s, 0]), b = map([s2, hw]);
+        c.beginPath(); c.moveTo(a[0], a[1]); c.lineTo(b[0], b[1]);
+        c.strokeStyle = "rgba(200,232,160,0.22)"; c.lineWidth = 0.7; c.stroke();
+      }
+    }
+    traceTo(c, F.vein, F.vein.len);
+    c.strokeStyle = "rgba(205,236,165,0.5)"; c.lineWidth = Math.max(0.8, F.Lp * 0.012); c.stroke();
+    c.restore();
+  }
+
+  // ---------- the bouquet: timeline ----------
+  function newBouquet(delayMs = 300) {
+    const seed = (Math.random() * 2 ** 32) >>> 0, r = rng(seed ^ 0x9e3779b9);
+    const list = CONFIG.flowers.slice(0, SLOTS.length), lastI = list.length - 1;
+    const flowers = list.map((fl, i) => {
+      const big = i === lastI, own = big;
+      const head = makeHead(fl.variety, fl.colour, (seed + i * 7919) >>> 0, big ? 2.8 : own ? 2.6 : 1.8, big || own ? 1 : 0.6);
+      return { head, stemStart: -100, stemDur: STEM_T };
+    });
+    // The bouquet is already finished, out of sight; only the last flower is drawn.
+    const C = -60;
+    flowers.forEach((o, i) => {
+      if (i === lastI) return;
+      const h = o.head;
+      h.start = -90; h.cStart = C - h.start; h.total = h.cStart + 1.6 + h.cd + 0.8;
+    });
+    const leaves = LEAF_PLAN.filter(l => l.stem < lastI).map(l => ({ ...l, len: 0.22 + r() * 0.06, tilt: 0.95 + r() * 0.3, start: -80 }));
+    const back = { start: -70 }, wrap = { start: -70 }, ribbon = { start: -70 };
+    // the last flower: the stem from its cut end upward, then every petal, then colour
+    const own = flowers[lastI], h = own.head;
+    own.stemStart = 0.5; own.stemDur = 1.4;
+    h.start = own.stemStart + own.stemDur + 0.1;
+    h.cStart = h.sketchEnd + 0.3; h.total = h.cStart + 1.6 + h.cd + 0.8;
+    const green0 = h.start + h.sketchEnd + 0.1;
+    const move0 = h.start + h.cStart + 1.6 + h.cd + 0.4, moveDur = 2.6;   // then it is carried into the bouquet
+    const total = move0 + moveDur + 1.2;
+    const born = reduced ? performance.now() - (total / speed) * 1000 - 1 : performance.now() + delayMs;
+    bouquet = { flowers, leaves, back, wrap, ribbon, C, total, born, lastI, green0, move0, moveDur };
+    geom = null;
+    lastNib = null;
+  }
+  const ageOf = now => ((now - bouquet.born) / 1000) * speed;
+
+  // ---------- the bouquet: shapes (rebuilt when the screen size changes) ----------
+  function getGeom() {
+    if (geom && geom.W === W && geom.H === H) return geom;
+    const U = Math.min(W * 1.0, H * 0.56), cx = W / 2, cy = Math.max(H * 0.34, U * 0.72 + 12); // room above for the big flower on top
+    const wT = cy + U * 0.33, wB = cy + U * 0.95, bindY = cy + U * 0.76, endY = cy + U * 1.12;
+    const ribY = bindY - RIB_UP * U; // where the ribbon is tied: a little above where the stems gather
+    const B = bouquet;
+
+    const heads = B.flowers.map((_, i) => ({ x: cx + SLOTS[i][0] * U, y: cy + SLOTS[i][1] * U, R: SLOTS[i][2] * U }));
+
+    // stems: from the cut end at the bottom, through the tie, up to the head
+    const stems = heads.map(h => {
+      const sp = clamp((h.x - cx) / (0.4 * U), -1, 1);
+      const end = [cx + sp * 0.075 * U, endY], bind = [cx + sp * 0.022 * U, bindY];
+      const ctrl = [bind[0] + (h.x - bind[0]) * 0.15, h.y + (bind[1] - h.y) * 0.55];
+      const pts = [end];
+      sampleLine(end, bind, 8, pts);
+      sampleQuad(bind, ctrl, [h.x, h.y + h.R * 0.05], 34, pts);
+      return withCum(pts);
+    });
+
+    const leaves = B.leaves.map(lf => {
+      const st = stems[lf.stem], target = wT - U * lf.up;
+      let best = 10, bd = Infinity;
+      for (let i = 10; i < st.pts.length - 1; i++) { const d = Math.abs(st.pts[i][1] - target); if (d < bd) { bd = d; best = i; } }
+      return leafFrame(lf, st, best, U);
+    });
+
+    // paper behind the flowers, with three points showing above them
+    const backCorners = [
+      [cx - 0.4 * U, wT], [cx - 0.64 * U, cy - 0.12 * U], [cx - 0.3 * U, cy - 0.2 * U], [cx - 0.06 * U, cy - 0.52 * U],
+      [cx + 0.18 * U, cy - 0.3 * U], [cx + 0.6 * U, cy - 0.27 * U], [cx + 0.4 * U, wT]
+    ];
+    const backPts = [backCorners[0]];
+    for (let i = 1; i < backCorners.length; i++) sampleLine(backCorners[i - 1], backCorners[i], 10, backPts);
+    sampleLine(backCorners[backCorners.length - 1], backCorners[0], 10, backPts);
+    const back = withCum(backPts);
+
+    // front wrap: a paper cone with a soft wavy top edge and two folds
+    const hw = 0.44 * U, bw = 0.07 * U;
+    const tl = [cx - hw, wT - 0.03 * U], tr = [cx + hw, wT - 0.06 * U], br = [cx + bw, wB], bl = [cx - bw, wB];
+    const top = [tl];
+    for (let i = 1; i <= 40; i++) {
+      const s = i / 40, p = lerp(tl, tr, s);
+      top.push([p[0], p[1] + Math.sin(s * Math.PI) * 0.035 * U + Math.sin(s * Math.PI * 5) * 0.008 * U]);
+    }
+    const rightSide = [tr]; sampleQuad(tr, [cx + hw * 0.5, wT + (wB - wT) * 0.45], br, 20, rightSide);
+    const leftSide = [bl]; sampleQuad(bl, [cx - hw * 0.5, wT + (wB - wT) * 0.45], tl, 20, leftSide);
+    const wrapPts = [...top, ...rightSide.slice(1)];
+    sampleLine(br, bl, 4, wrapPts);
+    wrapPts.push(...leftSide.slice(1));
+    const f1 = [cx - bw * 0.35, wB], f2 = [cx + bw * 0.3, wB];
+    const wrap = {
+      outline: withCum(wrapPts), top,
+      c1: withCum(sampleLine(top[13], f1, 12, [top[13]])),
+      c2: withCum(sampleLine(top[28], f2, 12, [top[28]])),
+      leftPanel: [...top.slice(0, 14), f1, bl, ...leftSide.slice(1)],
+      rightPanel: [...top.slice(28), ...rightSide.slice(1), f2]
+    };
+
+    // ribbon: a band around the wrap and a bow
+    let bh = 0.15 * U;
+    for (const p of rightSide) if (Math.abs(p[1] - ribY) < U * 0.03) bh = p[0] - cx + U * 0.012;
+    const bandTop = [], bandBot = [];
+    for (let i = 0; i <= 16; i++) {
+      const s = i / 16, x = cx - bh + 2 * bh * s, sag = Math.sin(Math.PI * s) * 0.012 * U;
+      bandTop.push([x, ribY - 0.025 * U + sag]); bandBot.push([x, ribY + 0.025 * U + sag]);
+    }
+    const K = [cx, ribY + 0.01 * U];
+    const STYLE = ["loops", "puffy", "soft"].includes(CONFIG.bow) ? CONFIG.bow : "loops";
+    const P = (dx, dy, side) => [cx + side * dx * U, ribY + dy * U];
+    const strip = (centre, wd) => { // a ribbon of width 2*wd(i) along a centre line
+      const n = centre.length - 1, a = offsetPts(centre, n, wd), b = offsetPts(centre, n, i => -wd(i));
+      return { a, b, n };
+    };
+    const loop = side => {
+      const pts = [K];
+      if (STYLE === "loops") { // the centre line of a ribbon loop: out, round, and back to the knot
+        sampleCubic(K, P(0.05, -0.145, side), P(0.2, -0.15, side), P(0.195, -0.045, side), 18, pts);
+        sampleCubic(pts[pts.length - 1], P(0.19, 0.03, side), P(0.07, 0.035, side), K, 18, pts);
+        const n = pts.length - 1, { a, b } = strip(pts, i => (0.012 + 0.012 * Math.sin(Math.PI * i / n)) * U);
+        return withCum([...a, ...b.reverse()]);
+      }
+      if (STYLE === "puffy") {
+        sampleCubic(K, P(0.02, -0.17, side), P(0.235, -0.18, side), P(0.225, -0.02, side), 18, pts);
+        sampleCubic(pts[pts.length - 1], P(0.215, 0.075, side), P(0.06, 0.065, side), K, 18, pts);
+        return withCum(pts);
+      }
+      sampleCubic(K, P(0.06, -0.13, side), P(0.2, -0.13, side), P(0.195, -0.035, side), 16, pts);
+      sampleCubic(pts[pts.length - 1], P(0.19, 0.035, side), P(0.07, 0.045, side), K, 16, pts);
+      return withCum(pts);
+    };
+    const tail = side => {
+      const centre = [K];
+      let wd;
+      if (STYLE === "loops") { // slim, with a gentle wave
+        sampleCubic(K, P(0.02, 0.09, side), P(0.12, 0.13, side), P(0.1, 0.24, side), 16, centre);
+        wd = i => 0.012 * U;
+      } else if (STYLE === "puffy") { // short and wide
+        sampleQuad(K, P(0.04, 0.1, side), P(0.12, 0.19, side), 14, centre);
+        wd = i => (0.017 + 0.006 * i / 14) * U;
+      } else {
+        sampleQuad(K, P(0.03, 0.12, side), P(0.11, 0.235, side), 14, centre);
+        wd = i => (0.013 + 0.007 * i / 14) * U;
+      }
+      const { a, b, n } = strip(centre, wd);
+      const notch = lerp(centre[n], centre[n - 2], 0.6); // a V cut at the end
+      return withCum([...a, notch, ...b.reverse()]);
+    };
+    const knot = [];
+    const kw = STYLE === "loops" ? 0.024 : 0.031, kh = STYLE === "loops" ? 0.03 : 0.035, ke = STYLE === "puffy" ? 1 : 0.75;
+    for (let i = 0; i <= 32; i++) {
+      const an = (i / 32) * Math.PI * 2, c = Math.cos(an), sn = Math.sin(an);
+      knot.push([K[0] + Math.sign(c) * Math.abs(c) ** ke * kw * U, K[1] + Math.sign(sn) * Math.abs(sn) ** ke * kh * U]);
+    }
+    const big = line => withCum(line.pts.map(([x, y]) => [K[0] + (x - K[0]) * BOW, K[1] + (y - K[1]) * BOW])); // the bow, scaled around the knot
+    const ribbon = {
+      parts: [withCum([...bandTop, ...bandBot.reverse()]), big(loop(-1)), big(loop(1)), big(tail(-1)), big(tail(1)), big(withCum(knot))]
+    };
+
+    // a bed of foliage packed behind the flowers, so no paper shows between them
+    const fr = rng(4242), bed = [], yTop = cy - 0.5 * U;
+    const addLeaf = (x, y, ang, Lp) => { // centred on (x, y)
+      const cs = Math.cos(ang), sn = Math.sin(ang), side = fr() < 0.5 ? -1 : 1;
+      const ax = x - cs * Lp * 0.45, ay = y - sn * Lp * 0.45;
+      const map = ([u, v]) => { v *= side * 1.35; return [ax + (u * cs - v * sn) * Lp, ay + (u * sn + v * cs) * Lp]; };
+      bed.push({ pts: LEAF.outline.map(map), a: map([0.05, 0]), b: map([0.9, 0]), l: 13 + fr() * 13, h: 100 + fr() * 22 });
+    };
+    for (let i = 0; i < 0; i++) {
+      const y = yTop + fr() * (wT + 0.02 * U - yTop), spread = 0.36 + 0.2 * Math.min(1, (y - yTop) / (0.25 * U));
+      const x = cx + (fr() * 2 - 1) * spread * U;
+      addLeaf(x, y, Math.atan2(y - (cy + 0.55 * U), x - cx) + (fr() - 0.5) * 1.1, U * (0.13 + fr() * 0.08));
+    }
+    if (false) for (const k of [-0.1, -0.05, 0, 0.05, 0.1]) addLeaf(cx + k * U, wT - 0.04 * U, -Math.PI / 2 + k * 3 + (fr() - 0.5) * 0.3, U * 0.16); // just above the wrap
+    // right-most reach of the bouquet (petals, paper, leaves) — the camera keeps everything left of it hidden
+    let right = cx + 0.66 * U;
+    heads.forEach((g, i) => { if (i !== B.lastI) right = Math.max(right, g.x + g.R * 1.5); });
+    for (const L of leaves) for (const q of (L.pts || [])) right = Math.max(right, q[0]);
+    right += 0.03 * U;
+    // where the last flower is drawn: far enough to the side that a camera centred on it
+    // (never zoomed out past 1) cannot see the bouquet, so the flower always sits mid-screen
+    const lastX = heads[B.lastI].x;
+    const D = [Math.max(1.7 * U, right - lastX + W / 2 + 0.2 * U), -0.02 * U];
+    geom = { W, H, U, cx, cy, wT, wB, bindY, ribY, endY, heads, stems, leaves, back, wrap, ribbon, D, bed, right };
+    return geom;
+  }
+
+  // ---------- painting the paper and ribbon ----------
+  function revealUp(c, G, a, paint) { // colour rises from the bottom of the bouquet to the top
+    const topY = G.cy - 0.6 * G.U, botY = G.endY + 20, h = botY - topY;
+    c.save();
+    c.beginPath(); c.rect(G.cx - 1.5 * G.U, botY - h * a, 3 * G.U, h * a); c.clip();
+    paint();
+    c.restore();
+  }
+  function paintBack(G) {
+    const P = PAPERS[CONFIG.paper] || PAPERS.kraft, pts = G.back.pts;
+    polyPath(ctx, pts, true);
+    const g = ctx.createLinearGradient(0, G.cy - 0.52 * G.U, 0, G.wT);
+    g.addColorStop(0, P.back[0]); g.addColorStop(1, P.back[1]);
+    ctx.fillStyle = g; ctx.fill();
+    ctx.strokeStyle = "rgba(60,40,20,0.35)"; ctx.lineWidth = 0.8; ctx.stroke();
+    for (const tip of [pts[10], pts[30], pts[50]]) { // soft creases running down from each point
+      ctx.beginPath(); ctx.moveTo(tip[0], tip[1]); ctx.lineTo(G.cx + (tip[0] - G.cx) * 0.2, G.wT);
+      ctx.strokeStyle = "rgba(255,250,240,0.35)"; ctx.lineWidth = 1.2; ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(tip[0] + 2, tip[1] + 2); ctx.lineTo(G.cx + (tip[0] - G.cx) * 0.2 + 2, G.wT);
+      ctx.strokeStyle = "rgba(60,40,20,0.15)"; ctx.lineWidth = 1; ctx.stroke();
+    }
+  }
+  function paintWrap(G) {
+    const P = PAPERS[CONFIG.paper] || PAPERS.kraft, w = G.wrap, U = G.U;
+    ctx.save(); ctx.translate(U * 0.01, U * 0.02);
+    polyPath(ctx, w.outline.pts, true); ctx.fillStyle = "rgba(3,5,14,0.4)"; ctx.fill();
+    ctx.restore();
+    polyPath(ctx, w.outline.pts, true);
+    const g = ctx.createLinearGradient(G.cx - 0.44 * U, 0, G.cx + 0.44 * U, 0);
+    g.addColorStop(0, P.front[0]); g.addColorStop(0.55, P.front[0]); g.addColorStop(1, P.front[1]);
+    ctx.fillStyle = g; ctx.fill();
+    const v = ctx.createLinearGradient(0, G.wT, 0, G.wB);
+    v.addColorStop(0, "rgba(255,245,225,0.12)"); v.addColorStop(1, "rgba(20,10,5,0.25)");
+    ctx.fillStyle = v; ctx.fill();
+    polyPath(ctx, w.leftPanel, true); ctx.fillStyle = "rgba(30,15,5,0.2)"; ctx.fill();
+    polyPath(ctx, w.rightPanel, true); ctx.fillStyle = "rgba(30,15,5,0.12)"; ctx.fill();
+    for (const c of [w.c1, w.c2]) {
+      polyPath(ctx, c.pts); ctx.strokeStyle = "rgba(255,248,232,0.45)"; ctx.lineWidth = 1.2; ctx.stroke();
+    }
+    polyPath(ctx, w.outline.pts, true); ctx.strokeStyle = "rgba(40,22,8,0.5)"; ctx.lineWidth = 0.8; ctx.stroke();
+    polyPath(ctx, w.top); ctx.strokeStyle = "rgba(255,248,232,0.5)"; ctx.lineWidth = 1.4; ctx.stroke();
+  }
+  function paintRibbon(G) {
+    const [dark, light] = RIBBONS[CONFIG.ribbon] || RIBBONS.rose, U = G.U, b = BOW * U;
+    const mid = mixHsl(dark, light, 0.5), edge = mixHsl(dark, "hsl(0 0% 0%)", 0.25);
+    const STYLE = ["loops", "puffy", "soft"].includes(CONFIG.bow) ? CONFIG.bow : "loops";
+    const parts = G.ribbon.parts, order = [0, 3, 4, 1, 2, 5]; // band, tails, loops, knot on top
+    const kx = G.cx, ky = G.ribY + 0.01 * U;
+    const halves = pts => { const h = Math.floor(pts.length / 2); return [pts.slice(0, h), pts.slice(h)]; };
+    const centroid = pts => pts.reduce((a, p) => [a[0] + p[0] / pts.length, a[1] + p[1] / pts.length], [0, 0]);
+    for (const j of order) {
+      const pts = parts[j].pts, side = j === 1 || j === 3 ? -1 : 1;
+      ctx.save(); ctx.translate(U * 0.004, U * 0.007); // a light shadow on the paper
+      polyPath(ctx, pts, true); ctx.fillStyle = "rgba(60,30,20,0.18)"; ctx.fill();
+      ctx.restore();
+      let g;
+      if (j === 0) {
+        g = ctx.createLinearGradient(0, G.ribY - 0.03 * U, 0, G.ribY + 0.035 * U);
+        g.addColorStop(0, light); g.addColorStop(0.5, mid); g.addColorStop(1, dark);
+      } else if (j === 1 || j === 2) {
+        if (STYLE === "puffy") {
+          const c = centroid(pts); g = ctx.createRadialGradient(c[0] + side * 0.02 * b, c[1] - 0.03 * b, 0, c[0], c[1], 0.13 * b);
+          g.addColorStop(0, light); g.addColorStop(0.6, mid); g.addColorStop(1, dark);
+        } else {
+          g = ctx.createLinearGradient(kx, ky + 0.03 * b, kx + side * 0.12 * b, ky - 0.12 * b);
+          g.addColorStop(0, dark); g.addColorStop(0.45, mid); g.addColorStop(1, light);
+        }
+      } else if (j === 3 || j === 4) {
+        g = ctx.createLinearGradient(kx, ky, kx + side * 0.06 * b, ky + 0.24 * b);
+        g.addColorStop(0, dark); g.addColorStop(0.35, light); g.addColorStop(1, mid);
+      } else {
+        g = ctx.createRadialGradient(kx - 0.01 * b, ky - 0.012 * b, 0, kx, ky, 0.04 * b);
+        g.addColorStop(0, light); g.addColorStop(1, mid);
+      }
+      polyPath(ctx, pts, true); ctx.fillStyle = g; ctx.fill();
+      ctx.strokeStyle = edge; ctx.globalAlpha = 0.55; ctx.lineWidth = 0.8; ctx.stroke(); ctx.globalAlpha = 1;
+      if (j === 1 || j === 2) {
+        if (STYLE === "loops") { // the inner edge shows the ribbon turning: a darker line inside, a bright one outside
+          const [e1, e2] = halves(pts), c = centroid(pts), dist = e => e.reduce((a, p) => a + Math.hypot(p[0] - c[0], p[1] - c[1]), 0) / e.length;
+          const [inner, outer] = dist(e1) < dist(e2) ? [e1, e2] : [e2, e1];
+          polyPath(ctx, inner.slice(3, -3)); ctx.strokeStyle = dark; ctx.lineWidth = Math.max(1, U * 0.004); ctx.stroke();
+          polyPath(ctx, outer.slice(6, Math.floor(outer.length * 0.55))); ctx.strokeStyle = "rgba(255,255,255,0.55)"; ctx.lineWidth = Math.max(1, U * 0.0035); ctx.lineCap = "round"; ctx.stroke();
+        } else if (STYLE === "puffy") { // two soft folds running out from the knot
+          for (const f of [0.35, 0.7]) {
+            ctx.beginPath(); ctx.moveTo(kx + side * 0.03 * b, ky - 0.005 * b);
+            ctx.quadraticCurveTo(kx + side * 0.1 * b, ky - (0.02 + 0.08 * f) * b, kx + side * (0.15 + 0.03 * f) * b, ky - (0.02 + 0.1 * f) * b);
+            ctx.strokeStyle = "rgba(170,50,95,0.35)"; ctx.lineWidth = 1.1; ctx.lineCap = "round"; ctx.stroke();
+          }
+          polyPath(ctx, pts.slice(5, 16)); ctx.strokeStyle = "rgba(255,255,255,0.5)"; ctx.lineWidth = Math.max(1, U * 0.004); ctx.lineCap = "round"; ctx.stroke();
+        } else {
+          polyPath(ctx, pts.slice(4, 15)); ctx.strokeStyle = "rgba(255,255,255,0.5)"; ctx.lineWidth = Math.max(1, U * 0.004); ctx.lineCap = "round"; ctx.stroke();
+        }
+      }
+      if (j === 3 || j === 4) {
+        const [e1] = halves(pts);
+        polyPath(ctx, e1.slice(2, -2)); ctx.strokeStyle = "rgba(255,255,255,0.35)"; ctx.lineWidth = 0.9; ctx.stroke();
+      }
+    }
+  }
+  function mixHsl(a, b, t) { // blend two "hsl(h s% l%)" colours
+    const p = x => x.match(/[\d.]+/g).map(Number), A = p(a), B = p(b);
+    return `hsl(${A[0] + (B[0] - A[0]) * t} ${A[1] + (B[1] - A[1]) * t}% ${A[2] + (B[2] - A[2]) * t}%)`;
+  }
+
+  // ---------- drawing the whole bouquet at this moment; returns where the pen is ----------
+  function drawBouquet(now) {
+    const B = bouquet, G = getGeom(), age = ageOf(now);
+    if (age <= 0) return null;
+    const U = G.U, lw = Math.max(0.8, U * 0.0032), C = B.C;
+    const prog = (s, d) => easeInOut(clamp((age - s) / d, 0, 1));
+    const gGreenAll = prog(C, 1.2), aBack = prog(C + 0.3, 1.0), aWrap = prog(C + 0.5, 1.2), aRib = prog(C + 1.2, 0.8);
+    let nib = null, headNib = null;
+    const pick = e => { if (e) nib = e; };
+
+    const glow = prog(C + 0.6, 2.5); // a faint light behind the flowers once they have colour
+    if (glow > 0) {
+      const hg = ctx.createRadialGradient(G.cx, G.cy, U * 0.1, G.cx, G.cy, U * 1.1);
+      hg.addColorStop(0, `rgba(236,238,244,${0.025 * glow})`); hg.addColorStop(1, "rgba(236,238,244,0)"); // faint neutral light
+      ctx.fillStyle = hg; ctx.fillRect(G.cx - U * 1.1, G.cy - U * 1.1, U * 2.2, U * 2.2);
+    }
+
+    const sway = reduced ? 0 : Math.sin(now / 2600) * 0.008 * clamp(age - B.total, 0, 2) / 2;
+    ctx.save();
+    ctx.translate(G.cx, G.bindY); ctx.rotate(sway); ctx.translate(-G.cx, -G.bindY);
+    ctx.lineCap = "round"; ctx.lineJoin = "round";
+
+    // paper behind the flowers
+    pick(inkShape(ctx, G.back, age, B.back.start, BACK_T, aBack, lw));
+    if (aBack > 0) revealUp(ctx, G, aBack, () => paintBack(G));
+    if (aBack > 0) for (const lf of G.bed) { // packed foliage
+      polyPath(ctx, lf.pts, true);
+      ctx.fillStyle = `hsl(${lf.h} 34% ${lf.l}%)`; ctx.fill();
+      ctx.strokeStyle = "rgba(2,12,4,0.6)"; ctx.lineWidth = 0.8; ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(lf.a[0], lf.a[1]); ctx.lineTo(lf.b[0], lf.b[1]);
+      ctx.strokeStyle = "rgba(190,225,150,0.18)"; ctx.lineWidth = 0.8; ctx.stroke();
+    }
+
+    // the last flower is drawn off to the side, then carried into its place
+    const mp = clamp((age - B.move0) / B.moveDur, 0, 1), me = easeInOut(mp), bump = Math.sin(Math.PI * mp);
+    const off = [G.D[0] * (1 - me), G.D[1] * (1 - me) - 0.07 * U * bump];
+
+    // stems
+    const sw = Math.max(2, U * 0.011);
+    B.flowers.forEach((o, i) => {
+      const st = G.stems[i], sa = age - o.stemStart, own = i === B.lastI;
+      if (sa <= 0) return;
+      const ks = easeInOut(clamp(sa / o.stemDur, 0, 1));
+      const gGreen = own ? prog(B.green0, 1.0) : gGreenAll;
+      ctx.save();
+      if (own) ctx.translate(off[0], off[1]);
+      if (gGreen < 1) {
+        const e = traceTo(ctx, st, ks * st.len);
+        if (ks < 1) { inkStroke(ctx, lw * 1.2, true); nib = own ? [e[0] + off[0], e[1] + off[1]] : e; }
+        else { ctx.strokeStyle = INK(0.85 * (1 - gGreen)); ctx.lineWidth = lw * 1.2; ctx.stroke(); }
+      }
+      if (gGreen > 0) { // green rises from the cut end; round and slightly tapered
+        const n = st.pts.length - 1, m = Math.max(1, Math.round(n * gGreen)), hw = k => sw * (0.6 - 0.15 * k / n);
+        const right = offsetPts(st.pts, m, hw), left = offsetPts(st.pts, m, k => -hw(k));
+        polyPath(ctx, right.concat(left.reverse()), true);
+        const gr = ctx.createLinearGradient(st.pts[0][0], st.pts[0][1], st.pts[n][0], st.pts[n][1]);
+        gr.addColorStop(0, "hsl(96 34% 24%)"); gr.addColorStop(0.3, "hsl(104 36% 16%)"); gr.addColorStop(1, "hsl(92 40% 30%)");
+        ctx.fillStyle = gr; ctx.fill();
+        polyPath(ctx, offsetPts(st.pts, m, k => -hw(k) * 0.4));
+        ctx.strokeStyle = "rgba(196,230,150,0.3)"; ctx.lineWidth = sw * 0.25; ctx.stroke();
+        ctx.globalAlpha = gGreen; // the freshly cut end
+        ctx.fillStyle = "hsl(80 40% 62%)"; ctx.beginPath(); ctx.ellipse(st.pts[0][0], st.pts[0][1], sw * 0.6, sw * 0.28, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.globalAlpha = 1;
+      }
+      ctx.restore();
+    });
+    const gGreen = gGreenAll;
+
+    // leaves
+    B.leaves.forEach((lf, j) => {
+      const F = G.leaves[j];
+      if (gGreen < 1) {
+        pick(inkShape(ctx, F.outline, age, lf.start, LEAF_T, gGreen, lw));
+        pick(inkLine(ctx, F.vein, age, lf.start + LEAF_T, VEIN_T, gGreen, lw));
+      }
+      if (gGreen > 0) paintLeaf(ctx, F, gGreen);
+    });
+
+    // front wrap
+    pick(inkShape(ctx, G.wrap.outline, age, B.wrap.start, WRAP_T, aWrap, lw));
+    if (aWrap < 1) {
+      pick(inkLine(ctx, G.wrap.c1, age, B.wrap.start + WRAP_T, CREASE_T, aWrap, lw));
+      pick(inkLine(ctx, G.wrap.c2, age, B.wrap.start + WRAP_T + CREASE_T, CREASE_T, aWrap, lw));
+    }
+    if (aWrap > 0) revealUp(ctx, G, aWrap, () => paintWrap(G));
+
+    // ribbon
+    G.ribbon.parts.forEach((part, j) => pick(inkShape(ctx, part, age, B.ribbon.start + j * RIB_T, RIB_T, aRib, lw)));
+    if (aRib > 0) { ctx.globalAlpha = aRib; paintRibbon(G); ctx.globalAlpha = 1; }
+
+    if (nib) drawNib(ctx, nib[0], nib[1]);
+
+    // flower heads, back row first so the front ones sit on top
+    B.flowers.forEach((o, i) => {
+      const h = G.heads[i], ha = age - o.head.start, own = i === B.lastI;
+      const x = h.x + (own ? off[0] : 0), y = h.y + (own ? off[1] : 0);
+      if (own && bump > 0) { // a soft shadow under the flower while it is lifted
+        const g = ctx.createRadialGradient(x + h.R * 0.15, y + h.R * 0.3, h.R * 0.2, x + h.R * 0.15, y + h.R * 0.3, h.R * 1.4);
+        g.addColorStop(0, `rgba(2,4,12,${0.4 * bump})`); g.addColorStop(1, "rgba(2,4,12,0)");
+        ctx.fillStyle = g; ctx.fillRect(x - h.R * 1.5, y - h.R * 1.3, h.R * 3.2, h.R * 3.2);
+      }
+      if (ha > o.head.total) { // finished heads are drawn once and reused
+        ctx.drawImage(headImage(o.head, h.R), x - h.R * 1.3, y - h.R * 1.3, h.R * 2.6, h.R * 2.6);
+      } else {
+        headNib = drawHead(ctx, o.head, ha, x, y, h.R) || headNib;
+      }
+    });
+    ctx.restore();
+    return headNib || nib;
+  }
+
+  // ---------- camera: close on the pen while it draws, then pulls back to the whole bouquet ----------
+  // the last shot: the whole bouquet high up, the words written underneath
+  function finaleLayout() {
+    const G = getGeom();
+    let top = Infinity, l = Infinity, r = -Infinity;
+    for (const h of G.heads) { top = Math.min(top, h.y - h.R); l = Math.min(l, h.x - h.R); r = Math.max(r, h.x + h.R); }
+    const bot = G.endY, m = H * 0.03, msgH = clamp(H * 0.1, 64, 110);
+    const fit = nickH => {
+      const z = Math.min(1, (H - msgH - nickH - m * 2) / (bot - top), (W * 0.94) / (r - l));
+      const y = top - (m - H / 2) / z, x = G.cx;
+      const bqBot = H / 2 + (bot - y) * z;
+      return { x, y, z, l: W / 2 + (l - x) * z, r: W / 2 + (r - x) * z, top: m, bqBot, textTop: bqBot + m * 0.3, msgBot: H - m - nickH, textBot: H - m };
+    };
+    return fit(0);
+  }
+  function cameraTarget(now) {
+    const full = { x: W / 2, y: H / 2, z: 1, rate: 0.9 };
+    if (!bouquet) return full;
+    if (reduced || ageOf(now) >= night0() - 0.3) { const L = finaleLayout(); return { x: L.x, y: L.y, z: L.z, rate: 1.3 }; }
+    const B = bouquet, G = getGeom(), age = ageOf(now), Z = Math.max(1, CONFIG.zoom), U = G.U;
+    const o = B.flowers[B.lastI], h = o.head, g = G.heads[B.lastI], D = G.D;
+    if (age >= B.move0 + B.moveDur - 0.4) return full;
+    if (age >= B.move0 - 0.6) { // the flower is carried over: show it and the bouquet together
+      const x0 = G.cx - 0.7 * U, x1 = g.x + D[0] + 0.3 * U, y0 = G.cy - 0.58 * U, y1 = G.endY + 0.04 * U;
+      return { x: (x0 + x1) / 2, y: (y0 + y1) / 2, z: Math.min(W / (x1 - x0), H / (y1 - y0)) * 0.95, rate: 1.6 };
+    }
+    let t;
+    const hx = g.x + D[0], hy = g.y + D[1], st = G.stems[B.lastI];
+    if (age < h.start) { // the pen draws the stem
+      const s = st.pts[0], p = age <= o.stemStart || !lastNib ? [s[0] + D[0], s[1] + D[1] - H * 0.1 / Z] : lastNib;
+      t = { x: p[0], y: p[1], z: Z, rate: 2.5 };
+    } else if (age < h.start + h.sketchEnd + 0.1) { // drawing the head: lean toward the pen
+      const p = lastNib || [hx, hy];
+      t = { x: hx + (p[0] - hx) * 0.5, y: hy + (p[1] - hy) * 0.5, z: Z, rate: 2.4 };
+    } else { // colour flows in: step back to see the whole flower
+      const top = hy - g.R * 1.2, bot = st.pts[0][1] + D[1] + 0.05 * U;
+      t = { x: hx - 0.05 * U, y: (top + bot) / 2, z: Math.max(1, Math.min(Z, H / (bot - top) * 0.92)), rate: 1.8 };
+      t.zMax = t.z; t.reach = hx + g.R * 1.35 + 0.04 * U; // whole flower must stay in frame
+    }
+    // keep the bouquet out of view until the flower joins it
+    const edge = G.right;
+    t.hide = edge;
+    if (t.x > edge + 20) t.z = Math.max(t.z, Math.min(t.zMax || Infinity, W / (2 * (t.x - edge))));
+    if (t.reach) t.z = Math.min(t.z, W / (t.reach - edge));
+    if (t.x - W / (2 * t.z) < edge) t.x = edge + W / (2 * t.z);
+    return t;
+  }
+  function updateCamera(dt, now) {
+    const t = cameraTarget(now);
+    if (!cam.ready) { Object.assign(cam, { x: t.x, y: t.y, z: t.z, ready: true }); return; }
+    const k = 1 - Math.exp(-dt * t.rate);
+    cam.x += (t.x - cam.x) * k;
+    cam.y += (t.y - cam.y) * k;
+    cam.z += (t.z - cam.z) * k;
+    if (t.hide !== undefined) { // the eased camera must not peek at the bouquet either
+      if (cam.x > t.hide + 20) cam.z = Math.max(cam.z, W / (2 * (cam.x - t.hide)));
+      if (cam.x - W / (2 * cam.z) < t.hide) cam.x = t.hide + W / (2 * cam.z);
+    }
+  }
+
+  // ---------- night: stars, out-of-focus lights, paper grain ----------
+  function makeBackdrop() {
+    stars = Array.from({ length: Math.round((W * H) / 11000) }, () => ({
+      x: Math.random() * W, y: Math.random() * H * 0.85, r: 0.3 + Math.random() * 1, ph: Math.random() * 6
+    }));
+    bokeh = Array.from({ length: 14 }, () => ({
+      x: Math.random() * W, y: Math.random() * H, r: 24 + Math.random() * 70, d: 0.08 + Math.random() * 0.3,
+      warm: Math.random() < 0.55, a: 0.035 + Math.random() * 0.06, ph: Math.random() * 6
+    }));
+    if (!grain) {
+      const g = document.createElement("canvas"); g.width = g.height = 160;
+      const gx = g.getContext("2d"), img = gx.createImageData(160, 160);
+      for (let i = 0; i < img.data.length; i += 4) {
+        const v = Math.random() < 0.5 ? 0 : 255;
+        img.data[i] = img.data[i + 1] = img.data[i + 2] = v;
+        img.data[i + 3] = Math.random() * 10;
+      }
+      gx.putImageData(img, 0, 0);
+      grain = ctx.createPattern(g, "repeat");
+    }
+  }
+  function drawBackdrop(now) {
+    for (const s of stars) {
+      const a = reduced ? 0.35 : 0.2 + 0.2 * Math.sin(now / 1400 + s.ph);
+      ctx.fillStyle = `rgba(227,232,244,${a})`;
+      ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2); ctx.fill();
+    }
+    for (const b of bokeh) { // drift a little against the camera for depth
+      const x = b.x + (W / 2 - cam.x) * b.d * cam.z, y = b.y + (H / 2 - cam.y) * b.d * cam.z + Math.sin(now / 4200 + b.ph) * 6;
+      const r = b.r * (1 + (cam.z - 1) * b.d);
+      const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+      const c = b.warm ? "255,206,130" : "130,160,235";
+      g.addColorStop(0, `rgba(${c},${b.a})`); g.addColorStop(0.7, `rgba(${c},${b.a * 0.6})`); g.addColorStop(1, `rgba(${c},0)`);
+      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
+    }
+  }
+
+  // ---------- the board: paper grain by day; then the lights go down for paper fireworks (from v3) ----------
+  const TAU = Math.PI * 2;
+  (() => { // paper grain, laid over the page by CSS
+    const g = document.createElement("canvas"); g.width = g.height = 200;
+    const x = g.getContext("2d"), img = x.createImageData(200, 200), r = rng(5);
+    for (let i = 0; i < img.data.length; i += 4) { const v = 238 + r() * 17; img.data[i] = v; img.data[i + 1] = v - 1; img.data[i + 2] = v - 4; img.data[i + 3] = 255; }
+    x.putImageData(img, 0, 0);
+    x.strokeStyle = "rgba(140,120,95,0.12)"; x.lineWidth = 0.7;
+    for (let i = 0; i < 50; i++) { const a = r() * TAU, px = r() * 200, py = r() * 200, l = 5 + r() * 16; x.beginPath(); x.moveTo(px, py); x.quadraticCurveTo(px + Math.cos(a + 0.6) * l / 2, py + Math.sin(a + 0.6) * l / 2, px + Math.cos(a) * l, py + Math.sin(a) * l); x.stroke(); }
+    document.getElementById("grain").style.backgroundImage = `url(${g.toDataURL()})`;
+  })();
+  const hex3 = h => { const n = parseInt(h.slice(1), 16); return [n >> 16, (n >> 8) & 255, n & 255]; };
+  const BOARD3 = hex3(BOARD), NIGHT3 = [24, 29, 58];
+  const paper0 = () => bouquet.move0 + bouquet.moveDur;                 // the flower is in the bouquet
+  const paperK = age => easeInOut(clamp((age - paper0()) / 1.0, 0, 1)); // v3's night (with its paper grain) replaces the old sky, in 1 s
+  const night0 = paper0;                                                // no cream stage: straight to the night
+  const nightK = age => easeInOut(clamp((age - night0()) / 1.0, 0, 1));
+  const FW_GAP = 0.75, FW_LIFE = 4;
+  const STARS = (() => { const r = rng(77); return Array.from({ length: 48 }, () => ({ u: r(), v: r() * 0.8, s: 0.45 + r() * 0.8, ph: r() * 6, a: r() * 6 })); })();
+  function starPath(x, y, r, a) {
+    ctx.beginPath();
+    for (let i = 0; i < 10; i++) { const rr = i % 2 ? r * 0.45 : r, an = a + i * Math.PI / 5; ctx.lineTo(x + Math.cos(an) * rr, y + Math.sin(an) * rr); }
+    ctx.closePath();
+  }
+  // Firework kinds: round sprays of sparks, drooping gold willows, tilted rings, in metallic and cool colours
+  const FW_INKS = [["#f4cd73", "#fff1c4"], ["#e9edf5", "#ffffff"], ["#7fd6d0", "#d8fbf6"], ["#8fb4f2", "#e1ecff"], ["#f6e2b3", "#fffaf0"]];
+  const KINDS = ["peony", "willow", "ring", "peony", "willow", "glitter"];
+  const bursts = new Map();
+  const toScr = (x, y) => [W / 2 + (x - cam.x) * cam.z, H / 2 + (y - cam.y) * cam.z];
+  function fwObstacles() { // the screen boxes the fireworks keep clear of: the bouquet and the words
+    const L = finaleLayout();
+    const obs = [[L.l + (L.r - L.l) * 0.1, L.top, L.r - (L.r - L.l) * 0.1, L.bqBot], [W * 0.06, L.textTop, W * 0.94, L.textBot]];
+    return obs;
+  }
+  function burstOf(i) {
+    const key = i + "|" + W + "x" + H; // placed for this screen
+    if (bursts.has(key)) return bursts.get(key);
+    const r = rng(9100 + i * 37);
+    // anywhere on the screen, but in a clear patch of sky: away from the bouquet and the last few bursts
+    const m = Math.min(W, H), obs = fwObstacles(), recent = [];
+    for (let k = 1; k <= 3 && i - k >= 0; k++) { const p = burstOf(i - k); recent.push([p.u * W, p.v * H]); }
+    let best = null;
+    for (let k = 0; k < 28; k++) {
+      const X = W * (0.03 + r() * 0.94), Y = H * (0.03 + r() * 0.9);
+      let clear = Infinity;
+      for (const o of obs) clear = Math.min(clear, Math.hypot(Math.max(o[0] - X, 0, X - o[2]), Math.max(o[1] - Y, 0, Y - o[3])));
+      let apart = Infinity;
+      for (const [px, py] of recent) apart = Math.min(apart, Math.hypot(X - px, Y - py));
+      const score = Math.min(clear, m * 0.3) * 1.4 + Math.min(apart, m * 0.5) * 0.5 + r() * m * 0.04;
+      if (!best || score > best.score) best = { X, Y, clear, score };
+    }
+    const u = best.X / W, v = best.Y / H, fit = best.clear / m;
+    const kind = KINDS[(i + Math.floor(r() * 2)) % KINDS.length];
+    const ink = kind === "willow" ? FW_INKS[0] : FW_INKS[Math.floor(r() * FW_INKS.length)];
+    const n = kind === "willow" ? 30 : kind === "ring" ? 32 : 44;
+    const parts = Array.from({ length: n }, (_, j) => {
+      const a = kind === "ring" ? j / n * TAU : j / n * TAU + (r() - 0.5) * 0.35, sp = kind === "ring" ? 1 : 0.55 + r() * 0.45;
+      return { a, sp, tw: r() * 6 };
+    });
+    const b = { u, v, kind, ink, parts, R: clamp(Math.min((kind === "willow" ? 0.24 : kind === "ring" ? 0.2 : 0.21) + r() * 0.07, fit * 1.1), 0.11, 0.31), tilt: (r() - 0.5) * 1.2, flat: 0.35 + r() * 0.25, drift: (r() - 0.5) * 0.12 };
+    bursts.set(key, b); if (bursts.size > 40) bursts.delete(bursts.keys().next().value);
+    return b;
+  }
+  function cutFill(build, col, sx, sy) { // a cut piece: its shadow on the night paper, then the piece
+    ctx.save(); ctx.translate(sx, sy); build(); ctx.fillStyle = "rgba(6,8,24,0.45)"; ctx.fill(); ctx.restore();
+    build(); ctx.fillStyle = col; ctx.fill();
+  }
+  function cutStroke(build, col, w, sx, sy) {
+    ctx.lineCap = "round"; ctx.lineWidth = w;
+    ctx.save(); ctx.translate(sx, sy); build(); ctx.strokeStyle = "rgba(6,8,24,0.4)"; ctx.stroke(); ctx.restore();
+    build(); ctx.strokeStyle = col; ctx.stroke();
+  }
+  function drawBurst(i, a, m) {
+    const b = burstOf(i), RISE = 0.7, x = b.u * W, y = b.v * H, sh = m * 0.005;
+    if (a < RISE) { // a little paper rocket climbing, with a dotted trail
+      const p = easeOut(a / RISE), y0 = H * 1.05, yy = y0 + (y - y0) * p, xx = x + (1 - p) * b.drift * m;
+      for (let d = 3; d >= 0; d--) {
+        const k = d * 0.07, py = yy + (y0 - y) * k * (1 - p * 0.6), pr = m * (d ? 0.0045 - d * 0.0008 : 0.006);
+        cutFill(() => { ctx.beginPath(); d ? ctx.arc(xx + (1 - p) * b.drift * m * k, py, pr, 0, TAU) : ctx.ellipse(xx, yy, pr * 0.8, pr * 2.6, 0, 0, TAU); }, b.ink[0], sh * 0.6, sh * 0.8);
+      }
+      return;
+    }
+    const q = a - RISE, willow = b.kind === "willow";
+    const life = willow ? 3.2 : 2.6, fade = 1 - clamp((q - life * 0.55) / (life * 0.45), 0, 1);
+    if (fade <= 0) return;
+    const R = b.R * m, g = m * (willow ? 0.075 : 0.05), ct = Math.cos(b.tilt), st = Math.sin(b.tilt);
+    const pos = (P, tq) => { // where a spark is tq seconds after the burst
+      const e = 1 - Math.exp(-(willow ? 2.4 : 3.2) * tq);
+      let dx = Math.cos(P.a) * P.sp, dy = Math.sin(P.a) * P.sp;
+      if (b.kind === "ring") { dy *= b.flat; const rx = dx * ct - dy * st, ry = dx * st + dy * ct; dx = rx; dy = ry; }
+      return [x + dx * R * e, y + dy * R * e + g * tq * tq * 0.5];
+    };
+    ctx.globalAlpha = fade;
+    const trail = willow ? 0.8 : 0.3, steps = willow ? 8 : 4;
+    cutStroke(() => {
+      ctx.beginPath();
+      for (const P of b.parts) {
+        const t0 = Math.max(0, q - trail);
+        ctx.moveTo(...pos(P, t0));
+        for (let k = 1; k <= steps; k++) ctx.lineTo(...pos(P, t0 + (q - t0) * k / steps));
+      }
+    }, b.ink[0], m * (willow ? 0.0038 : 0.0048), sh * 0.6, sh * 0.8);
+    cutFill(() => {
+      ctx.beginPath();
+      for (const P of b.parts) {
+        if (b.kind === "glitter" && q > 0.6 && Math.sin(q * 22 + P.tw * 7) < -0.2) continue;
+        const [px, py] = pos(P, q), pr = m * (willow ? 0.0055 : 0.0075) * (1 - 0.4 * clamp(q / life, 0, 1));
+        ctx.moveTo(px + pr, py); ctx.arc(px, py, pr, 0, TAU);
+      }
+    }, b.ink[1], sh * 0.5, sh * 0.7);
+    if (q < 0.35) { const f = 1 - q / 0.35; cutFill(() => { ctx.beginPath(); ctx.arc(x, y, m * 0.02 * f + 1, 0, TAU); }, b.ink[1], sh * 0.5, sh * 0.6); }
+    ctx.globalAlpha = 1;
+  }
+  function drawNight(age, now) { // screen space, behind the bouquet
+    const k = nightK(age); if (k <= 0) return;
+    const m = Math.min(W, H), t = now / 1000;
+    ctx.globalAlpha = k;
+    for (const s of STARS) {
+      const r = m * 0.0085 * s.s * (0.8 + 0.2 * Math.sin(t * 1.6 + s.ph));
+      cutFill(() => starPath(s.u * W, s.v * H, r, s.a), "#f1e4bd", r * 0.15, r * 0.2);
+    }
+    const G = getGeom(), [gx, gy] = toScr(G.cx, G.cy + G.U * 0.2), gr = G.U * 1.6 * cam.z; // a faint light on the bouquet
+    const g = ctx.createRadialGradient(gx, gy, 0, gx, gy, gr);
+    g.addColorStop(0, "rgba(232,236,246,0.04)"); g.addColorStop(1, "rgba(232,236,246,0)"); // a faint neutral light on the bouquet
+    ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+    ctx.globalAlpha = 1;
+    const fw0 = night0() + 0.2; // the first rockets go up while the lights are still going down
+    if (age < fw0) return;
+    const first = Math.max(0, Math.ceil((age - fw0 - FW_LIFE) / FW_GAP)), lastI = Math.floor((age - fw0) / FW_GAP);
+    for (let i = first; i <= lastI; i++) drawBurst(i, age - fw0 - i * FW_GAP, m);
+  }
+
+  // ---------- the message: the gold pen writes it under the bouquet ----------
+  const MSG = (Array.isArray(CONFIG.message) ? CONFIG.message : ["Doğum günün kutlu olsun"]).slice(0, 2).map(x => String(x || "").trim()).filter(Boolean);
+  const SCRIPT = '"Cormorant Garamond", Georgia, "Times New Roman", serif';
+  const FONT = size => `italic 500 ${size}px ${SCRIPT}`;
+  if (document.fonts && document.fonts.load) document.fonts.load(FONT(40)).catch(() => {});
+  let msgLineBot = 0, msgInline = null;
+  const msgEnd = () => night0() + 1.0 + MSG.reduce((a, t) => a + 0.6 + t.length * 0.075 + 0.35, 0);
+  function drawMessage(age) {
+    const t0 = night0() + 1.0;
+    if (!MSG.length || age < t0) return;
+    const L = finaleLayout(), area = L.msgBot - L.textTop, n = MSG.length;
+    ctx.save(); ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    ctx.textAlign = "left"; ctx.textBaseline = "middle";
+    // sizes first (each line as big as fits), then stack the lines close together, centred in the space
+    ctx.font = FONT(100);
+    const rows = MSG.map(text => {
+      const w100 = ctx.measureText(text).width || 1;
+      return { text, w100, size: Math.min((W * 0.7) / w100 * 100, (area / n) * 0.62, 44), extra: 0 };
+    });
+    // the nicknames are written at the end of the (last) line: keep room for the longest one, so the line stays centred
+    msgInline = null;
+    if (NICKS.length) {
+      ctx.font = NICK_FONT(100);
+      const nick100 = Math.max(...NICKS.map(t => ctx.measureText(t).width)) * NICK_SCALE, gap100 = 48;
+      const r = rows[rows.length - 1], size = Math.min((W * 0.9) / (r.w100 + gap100 + nick100) * 100, (area / n) * 0.62, 44);
+      if (size >= 20) { r.size = size; r.extra = (gap100 + nick100) * size / 100; r.gap = gap100 * size / 100; } // too narrow (phones): they go under the line instead
+      ctx.font = FONT(100);
+    }
+    const pitch = 1.08, total = rows.reduce((a, r) => a + r.size * pitch, 0);
+    let yy = L.textTop + Math.min((area - total) / 2, H * 0.035); // right under the bouquet, not adrift in empty space
+    for (const r of rows) { r.y = yy + r.size * pitch / 2 + r.size * 0.05; yy += r.size * pitch; }
+    msgLineBot = yy; // the nicknames go right under this
+    let ts = t0;
+    rows.forEach(({ text, w100, size, y, extra, gap }, i) => {
+      ctx.font = FONT(size);
+      const w = w100 * size / 100, x0 = W / 2 - (w + extra) / 2, pad = size * 0.35;
+      if (extra) msgInline = { x: x0 + w + gap, y, size };
+      const dur = 0.6 + text.length * 0.075, p = reduced ? 1 : clamp((age - ts) / dur, 0, 1);
+      ts += dur + 0.35;
+      if (p <= 0) return;
+      const edge = x0 - pad + (w + pad * 2) * p;
+      ctx.save();
+      ctx.beginPath(); ctx.rect(0, y - size * 1.2, edge, size * 2.4); ctx.clip();
+      const g = ctx.createLinearGradient(x0, 0, x0 + w, 0);
+      g.addColorStop(0, "#f6d58c"); g.addColorStop(0.5, "#fff4dc"); g.addColorStop(1, "#f2c46b");
+      ctx.fillStyle = g; ctx.fillText(text, x0, y);
+      ctx.restore();
+      if (p < 1) { // the glowing pen tip, writing
+        const ny = y + Math.sin(age * 23 + i) * size * 0.16 - size * 0.05;
+        const ng = ctx.createRadialGradient(edge, ny, 0, edge, ny, 16);
+        ng.addColorStop(0, "rgba(255,246,222,1)"); ng.addColorStop(0.3, "rgba(255,214,120,0.5)"); ng.addColorStop(1, "rgba(255,214,120,0)");
+        ctx.fillStyle = ng; ctx.beginPath(); ctx.arc(edge, ny, 16, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = "#fffaf0"; ctx.beginPath(); ctx.arc(edge, ny, 2.2, 0, Math.PI * 2); ctx.fill();
+      }
+    });
+    ctx.restore();
+  }
+
+  // ---------- the nicknames: written in pink under the message, one after another ----------
+  const NICKS = (Array.isArray(CONFIG.nicknames) ? CONFIG.nicknames : []).map(x => String(x || "").trim()).filter(Boolean);
+  const NICK_SCALE = 1.2; // MonteCarlo runs small: a little bigger than the message so they look the same size
+  const NICK_FONT = size => `${size}px "MonteCarlo", ${SCRIPT}`;
+  if (NICKS.length && document.fonts && document.fonts.load) document.fonts.load(NICK_FONT(48)).catch(() => {});
+  const NICK_IN = 1.1, NICK_HOLD = 2.2, NICK_OUT = 0.9, NICK_GAP = 0.3, NICK_T = NICK_IN + NICK_HOLD + NICK_OUT + NICK_GAP;
+  function drawNicknames(age) { // each one fades in, stays a moment, and fades away
+    if (!NICKS.length) return;
+    const t = age - (msgEnd() + 0.5);
+    if (t < 0) return;
+    const i = Math.floor(t / NICK_T) % NICKS.length, lt = t % NICK_T, text = NICKS[i];
+    if (lt > NICK_IN + NICK_HOLD + NICK_OUT) return;
+    const L = finaleLayout();
+    ctx.save(); ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.font = NICK_FONT(100);
+    const w100 = ctx.measureText(text).width || 1;
+    let x, y, size;
+    if (msgInline) { // straight after "Doğum günün kutlu olsun", on the same line
+      size = msgInline.size * NICK_SCALE; ctx.textAlign = "left";
+      x = msgInline.x; y = msgInline.y + msgInline.size * 0.04;
+    } else { // narrow screens: right under the message
+      size = Math.min((W * 0.82) / w100 * 100, 56);
+      x = W / 2; y = Math.min(Math.max(msgLineBot, L.textTop) + size * 0.62, H - size * 0.6);
+    }
+    const a = reduced ? 1 : easeInOut(clamp(lt / NICK_IN, 0, 1)) * (1 - easeInOut(clamp((lt - NICK_IN - NICK_HOLD) / NICK_OUT, 0, 1)));
+    const rise = reduced ? 0 : (1 - easeInOut(clamp(lt / NICK_IN, 0, 1))) * size * 0.25;
+    ctx.globalAlpha = a;
+    ctx.font = NICK_FONT(size);
+    const gx = ctx.textAlign === "left" ? x : x - w100 * size / 200, g = ctx.createLinearGradient(gx, 0, gx + w100 * size / 100, 0);
+    g.addColorStop(0, "#ff8fb6"); g.addColorStop(0.5, "#ffc4d8"); g.addColorStop(1, "#ff7aa8");
+    ctx.fillStyle = g; ctx.fillText(text, x, y + rise);
+    ctx.restore();
+  }
+
+  // ---------- the wish cake: blow into the mic (or tap) to put the candle out, then confetti ----------
+  const CAKE = CONFIG.cake && CONFIG.cake.wish ? CONFIG.cake : null;
+  const cakeWrap = document.getElementById("cake"), cakeBtn = cakeWrap.querySelector(".cake"), cakeMsg = cakeWrap.querySelector(".cake-msg");
+  const flameEl = cakeWrap.querySelector(".flame"), confCv = document.getElementById("confetti"), confCtx = confCv.getContext("2d");
+  let cakeLit = false, mic = null, afterCake = null;
+  function showCake(then) {
+    cakeLit = true; afterCake = then;
+    cakeWrap.classList.remove("out"); flameEl.style.removeProperty("--lean"); flameEl.style.removeProperty("--gust");
+    cakeMsg.classList.remove("done"); cakeMsg.textContent = CAKE.wish;
+    cakeWrap.setAttribute("aria-hidden", "false"); cakeWrap.classList.add("show");
+    if (CAKE.mic !== false) listen();
+  }
+  function stopMic() {
+    if (!mic) return;
+    try { mic.stream.getTracks().forEach(t => t.stop()); mic.ac.close(); } catch (e) {}
+    mic = null;
+  }
+  async function listen() { // a blow is loud, steady noise: the flame bends with it, and goes out if it lasts
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return;
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } });
+      if (!cakeLit) { stream.getTracks().forEach(t => t.stop()); return; }
+      const ac = new (window.AudioContext || window.webkitAudioContext)();
+      if (ac.state === "suspended") ac.resume().catch(() => {});
+      const an = ac.createAnalyser(); an.fftSize = 1024;
+      ac.createMediaStreamSource(stream).connect(an);
+      mic = { stream, ac };
+      const buf = new Float32Array(an.fftSize);
+      let held = 0, lv = 0, t0 = performance.now();
+      const tick = now => {
+        if (!mic || !cakeLit) return;
+        const dt = Math.min(0.1, (now - t0) / 1000); t0 = now;
+        an.getFloatTimeDomainData(buf);
+        let s = 0; for (let i = 0; i < buf.length; i++) s += buf[i] * buf[i];
+        const rms = Math.sqrt(s / buf.length);
+        lv += (rms - lv) * 0.35;
+        const k = clamp((lv - 0.02) / 0.12, 0, 1);
+        flameEl.style.setProperty("--lean", (k * 38).toFixed(1) + "deg");
+        flameEl.style.setProperty("--gust", (1 - k * 0.35).toFixed(3));
+        held = lv > 0.09 ? held + dt : Math.max(0, held - dt * 1.5);
+        if (held > 0.45) { blowOut(); return; }
+        requestAnimationFrame(tick);
+      };
+      requestAnimationFrame(tick);
+    } catch (e) {} // no mic, or no permission: tapping still works
+  }
+  async function blowOut() {
+    if (!cakeLit) return;
+    cakeLit = false; stopMic();
+    if (!flameEl.style.getPropertyValue("--lean") || parseFloat(flameEl.style.getPropertyValue("--lean")) < 10) flameEl.style.setProperty("--lean", "22deg");
+    cakeWrap.classList.add("out");
+    await wait(700);
+    cakeMsg.textContent = CAKE.done; cakeMsg.classList.add("done");
+    confetti();
+    await wait(4200);
+    cakeWrap.classList.remove("show"); cakeWrap.setAttribute("aria-hidden", "true");
+    canvas.focus({ preventScroll: true });
+    const then = afterCake; afterCake = null;
+    if (then) then();
+  }
+  cakeBtn.addEventListener("click", blowOut);
+  function confetti() { // paper pieces: a burst from the cake, then a slow fall
+    const w = innerWidth, h = innerHeight, dpr = Math.min(devicePixelRatio || 1, 2);
+    confCv.width = Math.round(w * dpr); confCv.height = Math.round(h * dpr);
+    const inks = ["#ff8fb6", "#ffc4d8", "#e86a92", "#f0bf4c", "#f6d58c", "#fff4dc"];
+    const r = cakeBtn.getBoundingClientRect(), ox = r.left + r.width / 2, oy = r.top + r.height * 0.35;
+    const n = reduced ? 40 : 170, P = [];
+    for (let i = 0; i < n; i++) {
+      const top = i % 3 === 0, a = -Math.PI / 2 + (Math.random() - 0.5) * 2.2, v = 380 + Math.random() * 520;
+      P.push({
+        x: top ? Math.random() * w : ox, y: top ? -20 - Math.random() * h * 0.5 : oy,
+        vx: top ? (Math.random() - 0.5) * 60 : Math.cos(a) * v, vy: top ? 40 + Math.random() * 80 : Math.sin(a) * v,
+        s: 5 + Math.random() * 7, rot: Math.random() * 6.3, vr: (Math.random() - 0.5) * 9, ph: Math.random() * 6.3,
+        col: inks[i % inks.length], round: Math.random() < 0.25,
+      });
+    }
+    let t0 = performance.now(), age = 0;
+    const step = now => {
+      const dt = Math.min(0.05, (now - t0) / 1000); t0 = now; age += dt;
+      confCtx.setTransform(dpr, 0, 0, dpr, 0, 0); confCtx.clearRect(0, 0, w, h);
+      let alive = 0;
+      for (const p of P) {
+        p.vy += 520 * dt; p.vx *= 1 - 1.6 * dt; p.vy *= 1 - 1.6 * dt; // gravity, then air holds the paper back
+        p.x += (p.vx + Math.sin(age * 3 + p.ph) * 40) * dt; p.y += p.vy * dt; p.rot += p.vr * dt;
+        if (p.y > h + 20) continue;
+        alive++;
+        confCtx.save(); confCtx.translate(p.x, p.y); confCtx.rotate(p.rot); confCtx.scale(1, Math.cos(age * 6 + p.ph)); // the flutter
+        confCtx.globalAlpha = clamp(5.6 - age, 0, 1); confCtx.fillStyle = p.col;
+        if (p.round) { confCtx.beginPath(); confCtx.arc(0, 0, p.s * 0.45, 0, Math.PI * 2); confCtx.fill(); }
+        else confCtx.fillRect(-p.s / 2, -p.s * 0.3, p.s, p.s * 0.6);
+        confCtx.restore();
+      }
+      if (alive && age < 5.6) requestAnimationFrame(step); else confCtx.clearRect(0, 0, w, h);
+    };
+    requestAnimationFrame(step);
+  }
+
+  // ---------- layout + loop ----------
+  function resize() {
+    DPR = Math.min(window.devicePixelRatio || 1, 2);
+    W = canvas.clientWidth; H = canvas.clientHeight;
+    canvas.width = Math.round(W * DPR); canvas.height = Math.round(H * DPR);
+    makeBackdrop();
+  }
+
+  let last = performance.now(), shownPaper = -1;
+  const homeEl = CONFIG.home && CONFIG.home.href ? document.getElementById("home") : null;
+  if (homeEl) { homeEl.href = CONFIG.home.href; homeEl.classList.add("show"); }
+  const grainEl = document.getElementById("grain"), lightEl = document.querySelector(".light");
+  function frame(now) {
+    const dt = Math.min(0.05, (now - last) / 1000);
+    last = now;
+    updateCamera(dt, now);
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    const age = bouquet ? ageOf(now) : 0, pk = bouquet ? paperK(age) : 0, nk = bouquet ? nightK(age) : 0;
+    ctx.clearRect(0, 0, W, H);
+    if (pk < 1) { ctx.globalAlpha = 1 - pk; drawBackdrop(now); ctx.globalAlpha = 1; } // the original night sheet
+    if (pk > 0) { // v3's night fades in over it
+      ctx.globalAlpha = pk;
+      ctx.fillStyle = `rgb(${NIGHT3.join(",")})`; // v3's night, faded in over the old sky (no cream stage)
+      ctx.fillRect(0, 0, W, H);
+      ctx.globalAlpha = 1;
+    }
+    if (pk !== shownPaper) { // the paper grain and light layers, and the old vignette, follow along
+      shownPaper = pk;
+      grainEl.style.opacity = lightEl.style.opacity = pk;
+      document.documentElement.style.setProperty("--drawing", 1 - pk);
+    }
+    if (nk > 0) drawNight(age, now);
+    if (bouquet) {
+      ctx.save();
+      ctx.translate(W / 2, H / 2);   // camera: zoom around the point it is looking at
+      ctx.scale(cam.z, cam.z);
+      ctx.translate(-cam.x, -cam.y);
+      lastNib = drawBouquet(now) || lastNib;
+      ctx.restore();
+    }
+    if (pk < 1) { ctx.globalAlpha = 1 - pk; ctx.fillStyle = grain; ctx.fillRect(0, 0, W, H); ctx.globalAlpha = 1; }
+    if (bouquet) { drawMessage(age); drawNicknames(age); }
+    requestAnimationFrame(frame);
+  }
+
+  // Tap or Enter once it is finished: draw it again
+  let opened = false;
+  function replay() {
+    if (!opened) return;
+    if (bouquet && ageOf(performance.now()) < bouquet.total) return;
+    newBouquet(400);
+  }
+  canvas.addEventListener("pointerdown", replay);
+  canvas.addEventListener("keydown", e => {
+    if (e.key !== "Enter" && e.key !== " ") return;
+    e.preventDefault();
+    replay();
+  });
+
+  resize();
+  window.addEventListener("resize", resize);
+
+  // ---------- the envelope: the drawing starts once it is opened ----------
+  const envWrap = document.getElementById("envelope"), envEl = envWrap.querySelector(".env");
+  for (const svg of envWrap.querySelectorAll("svg.kiku")) { // a small gold chrysanthemum, for the card
+    let d = "";
+    for (let i = 0; i < 16; i++) d += `<ellipse cx="0" cy="-26" rx="6.5" ry="19" transform="rotate(${i * 22.5})"/>`;
+    for (let i = 0; i < 12; i++) d += `<ellipse cx="0" cy="-15" rx="4.5" ry="11" transform="rotate(${i * 30 + 15})" opacity="0.85"/>`;
+    svg.innerHTML = `<g fill="#f4a3bf" stroke="rgba(150,40,80,0.35)" stroke-width="1">${d}</g><circle r="8" fill="#fbd0de" stroke="rgba(150,40,80,0.4)" stroke-width="1"/>`;
+  }
+  function openEnvelope() {
+    if (opened) return;
+    opened = true;
+    const k = reduced ? 0.05 : 1, later = (ms, fn) => setTimeout(fn, ms * k);
+    envWrap.classList.add("open");                                 // the seal lets go, the flap swings up
+    later(620, () => envWrap.classList.add("flap-back"));           // the open flap goes behind the card
+    later(950, () => envWrap.classList.add("card-out"));            // the card slides out
+    later(1900, () => { // the cake first, then the drawing begins
+      envWrap.classList.add("gone");
+      if (CAKE) showCake(() => newBouquet(900)); else { newBouquet(500); canvas.focus({ preventScroll: true }); }
+    });
+    later(2800, () => envWrap.remove());
+  }
+  // the security check: a pretend face scan, then the questions; the envelope only opens once every answer is right
+  // only one question per visit, picked at random (and not the same one as last time)
+  const POOL = (Array.isArray(CONFIG.questions) ? CONFIG.questions : []).filter(x => x && x.q && x.a && [].concat(x.a).length);
+  let pick = Math.floor(Math.random() * POOL.length), lastQ = -1;
+  try { lastQ = +(localStorage.getItem("kiku-last-q") ?? -1); } catch (e) {}
+  if (POOL.length > 1 && pick === lastQ) pick = (pick + 1 + Math.floor(Math.random() * (POOL.length - 1))) % POOL.length;
+  const forceQ = /q=(\d+)/.exec(location.hash); // testing: #q=5 always asks question 5 (1-based)
+  if (forceQ && +forceQ[1] >= 1 && +forceQ[1] <= POOL.length) pick = +forceQ[1] - 1;
+  try { localStorage.setItem("kiku-last-q", pick); } catch (e) {}
+  const QS = POOL.length ? [POOL[pick]] : [];
+  const gate = envWrap.querySelector(".gate"), gateIn = gate.querySelector(".gate-in"), gateLines = gate.querySelector(".gate-lines");
+  const gateMsg = gate.querySelector(".gate-msg"), gateHint = gate.querySelector(".gate-hint");
+  const norm = t => String(t).toLocaleLowerCase("tr").normalize("NFD").replace(/[̀-ͯ]/g, "")
+    .replace(/ı/g, "i").replace(/[^a-z0-9 ]/g, "").replace(/\s+/g, " ").trim();
+  const NOPE = ["Yanlış! Sistem kaşlarını çattı", "Hmm… Beniz bunu duysa küserdi", "Sahte Beniz alarmı!",
+                "Zarf sabırsızlanıyor", "Ciddi misin?", "Bilgisayar gülmemek için kendini zor tutuyor"];
+  const wait = ms => new Promise(r => setTimeout(r, reduced ? Math.min(ms, 150) : ms));
+  const line = (t, cls) => { const p = document.createElement("p"); p.textContent = t; if (cls) p.className = cls; gateLines.append(p); };
+  const mood = m => { envWrap.classList.remove("nope", "yay"); void envEl.offsetWidth; envWrap.classList.add(m); };
+  let qi = 0, wrongs = 0, nopeI = 0, started = false, busy = false;
+  function showQuestion() {
+    gateLines.textContent = "";
+    if (QS.length > 1) line(`Soru ${qi + 1} / ${QS.length}`);
+    gate.querySelector(".gate-q").textContent = QS[qi].q;
+    gateIn.value = ""; gateMsg.textContent = ""; gateMsg.className = "gate-msg"; gateHint.textContent = ""; wrongs = 0;
+  }
+  async function ask() {
+    if (opened) return;
+    if (!QS.length) return openEnvelope();
+    if (started) { if (gate.classList.contains("quiz")) gateIn.focus({ preventScroll: true }); return; }
+    started = true;
+    envWrap.classList.add("asking");
+    line("Bu mektup yalnızca Beniz'e özeldir.");
+    await wait(900);
+    line("Yüz taranıyor…");
+    gate.classList.add("scanning"); envWrap.classList.add("scan");
+    await wait(1900);
+    gate.classList.remove("scanning"); envWrap.classList.remove("scan");
+    line("Hata: Güzellik seviyesi ölçüm sınırını aştı.", "err");
+    mood("nope");
+    await wait(1700);
+    line("Yedek doğrulama başlatılıyor…");
+    await wait(1200);
+    showQuestion();
+    gate.classList.add("quiz");
+    gateIn.focus({ preventScroll: true });
+  }
+  gate.addEventListener("submit", async e => {
+    e.preventDefault();
+    if (opened || busy) return;
+    const Q = QS[qi], said = norm(gateIn.value);
+    gate.classList.remove("wrong");
+    if (!said) { gateMsg.textContent = "Boş cevap kabul edilmez, hanımefendi"; gateMsg.className = "gate-msg"; return gateIn.focus(); }
+    if ([].concat(Q.a).some(x => norm(x) === said) || [].concat(Q.contains || []).some(x => said.includes(norm(x)))) {
+      busy = true; gateIn.blur();
+      gateMsg.className = "gate-msg ok"; gateHint.textContent = "";
+      mood("yay");
+      if (++qi < QS.length) { gateMsg.textContent = "Doğru! Bir soru daha"; await wait(1300); showQuestion(); busy = false; gateIn.focus(); return; }
+      gateMsg.textContent = "Doğru!";
+      await wait(1100);
+      if (YN) return showYesNo();
+      return finish(gateMsg);
+    }
+    wrongs++;
+    const replies = Q.replies || {}, key = Object.keys(replies).find(k => norm(k) === said);
+    gateMsg.textContent = key ? replies[key] : NOPE[nopeI++ % NOPE.length];
+    gateMsg.className = "gate-msg";
+    const hints = Q.hints || {}, hk = Object.keys(hints).map(Number).filter(n => n <= wrongs).sort((a, b) => b - a)[0];
+    if (hk) gateHint.textContent = hints[hk];
+    void gate.offsetWidth; gate.classList.add("wrong");
+    mood("nope");
+    gateIn.select();
+  });
+  async function finish(el) {
+    el.className = el.className.replace(/ ok/g, "") + " ok";
+    el.textContent = "Kimlik doğrulandı";
+    await wait(1000);
+    el.textContent = "Hoş geldin, kürk prensesi";
+    await wait(1500);
+    openEnvelope();
+  }
+
+  // the yes / no question: "no" can never be pressed, it always runs away
+  const YN = CONFIG.yesno && CONFIG.yesno.q ? CONFIG.yesno : null;
+  const ynYes = gate.querySelector(".yn-yes"), ynNo = gate.querySelector(".yn-no"), ynMsg = gate.querySelector(".yn-msg");
+  let runs = 0, loose = false, ynDone = false;
+  function showYesNo() {
+    gate.querySelector(".yn-q").textContent = YN.q;
+    ynYes.textContent = YN.yes || "Evet"; ynNo.textContent = YN.no || "Hayır";
+    gate.classList.remove("quiz"); gate.classList.add("yn");
+    ynYes.focus({ preventScroll: true });
+  }
+  function flee(px, py) {
+    if (ynDone) return;
+    if (!loose) { // leave a hidden twin behind so "Evet" doesn't shift, then let it loose on the page
+      const r = ynNo.getBoundingClientRect(), ghost = ynNo.cloneNode(true);
+      ghost.className = "yn-btn yn-ghost"; ghost.tabIndex = -1; ghost.setAttribute("aria-hidden", "true");
+      ynNo.after(ghost);
+      Object.assign(ynNo.style, { left: r.left + "px", top: r.top + "px", width: r.width + "px" });
+      document.body.append(ynNo); ynNo.classList.add("loose"); void ynNo.offsetWidth;
+      loose = true;
+    }
+    const W = innerWidth, H = innerHeight, bw = ynNo.offsetWidth, bh = ynNo.offsetHeight, m = 14;
+    const y = ynYes.getBoundingClientRect(), cur = ynNo.getBoundingClientRect();
+    if (px == null) { px = cur.left + bw / 2; py = cur.top + bh / 2; }
+    let best = null, bestD = -1;
+    for (let i = 0; i < 30; i++) { // somewhere far from the finger, not on top of "Evet"
+      const x = m + Math.random() * (W - bw - 2 * m), t = m + Math.random() * (H - bh - 2 * m);
+      if (x < y.right + 12 && x + bw > y.left - 12 && t < y.bottom + 12 && t + bh > y.top - 12) continue;
+      const d = Math.hypot(x + bw / 2 - px, t + bh / 2 - py);
+      if (d > bestD) { best = [x, t]; bestD = d; }
+      if (d > Math.min(W, H) * 0.45) break;
+    }
+    if (best) { ynNo.style.left = best[0] + "px"; ynNo.style.top = best[1] + "px"; }
+    runs++;
+    ynYes.style.transform = `scale(${1 + Math.min(runs, 8) * 0.06})`; // and "Evet" gets a little bigger every time
+  }
+  const fleeEv = e => { e.preventDefault(); e.stopPropagation(); flee(e.clientX ?? (e.touches && e.touches[0] && e.touches[0].clientX), e.clientY ?? (e.touches && e.touches[0] && e.touches[0].clientY)); };
+  ynNo.addEventListener("pointerenter", fleeEv);
+  ynNo.addEventListener("pointerdown", fleeEv);
+  ynNo.addEventListener("touchstart", fleeEv, { passive: false });
+  ynNo.addEventListener("click", fleeEv);
+  ynNo.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { fleeEv(e); ynYes.focus(); } });
+  addEventListener("pointermove", e => { // the mouse only has to come close
+    if (ynDone || e.pointerType === "touch" || !gate.classList.contains("yn")) return;
+    const r = ynNo.getBoundingClientRect();
+    const dx = Math.max(r.left - e.clientX, 0, e.clientX - r.right), dy = Math.max(r.top - e.clientY, 0, e.clientY - r.bottom);
+    if (Math.hypot(dx, dy) < 40) flee(e.clientX, e.clientY);
+  });
+  ynYes.addEventListener("click", async () => {
+    if (ynDone) return;
+    ynDone = true;
+    ynNo.remove();
+    mood("yay");
+    ynMsg.textContent = "Doğru cevap";
+    await wait(900);
+    finish(ynMsg);
+  });
+
+  envEl.addEventListener("animationend", e => { if (e.target === envEl && /env-(nope|yay)/.test(e.animationName)) envWrap.classList.remove("nope", "yay"); });
+  envEl.addEventListener("click", ask);
+  envEl.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); ask(); } });
+
+  const seek = /t=([\d.]+)/.exec(location.hash); // e.g. #t=20 skips the envelope and jumps to that moment
+  if (seek) {
+    opened = true; envWrap.remove(); newBouquet(0);
+    bouquet.born = performance.now() - (+seek[1] / speed) * 1000;
+  }
+  requestAnimationFrame(t => { last = t; frame(t); });
+})();
+</script>
+</body>
+</html>

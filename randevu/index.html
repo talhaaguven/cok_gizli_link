@@ -1,0 +1,322 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Randevu Tutanağı</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,700;1,500&family=MonteCarlo&display=swap" rel="stylesheet">
+<style>
+:root { --ink: #0d1325; --night: #1b2747; --gold: #c8962e; --pink: #d9527f; --paper: #f7f0e2; --paper2: #efe5d0; --text: #2a2438; --seal: #8e1f3c; color-scheme: light; }
+* { box-sizing: border-box; }
+html, body { min-height: 100%; margin: 0; }
+body { background: radial-gradient(120% 80% at 50% 0%, #1d2550 0%, #0d1325 60%, #070919 100%) fixed; color: var(--text);
+  font-family: "Cormorant Garamond", Georgia, serif; font-weight: 500; font-size: 19px; line-height: 1.35; font-variant-numeric: lining-nums; -webkit-tap-highlight-color: transparent;
+  display: grid; place-items: start center; padding: max(74px, env(safe-area-inset-top) + 66px) 14px max(28px, env(safe-area-inset-bottom) + 20px); }
+
+/* the way back to the planet: always there */
+.home { position: fixed; z-index: 40; left: max(14px, env(safe-area-inset-left) + 10px); top: max(14px, env(safe-area-inset-top) + 10px);
+  width: 48px; height: 48px; display: grid; place-items: center; border-radius: 50%; background: rgba(10, 14, 32, 0.55);
+  -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); box-shadow: 0 0 0 1px rgba(255, 196, 216, 0.25); opacity: 0.9; }
+.home:hover { opacity: 1; }
+.home:focus-visible { outline: 2px solid #f0bf4c; outline-offset: 3px; }
+.home svg { width: 32px; height: 32px; display: block; overflow: visible; }
+
+/* the contract: a sheet of official paper */
+.paper { position: relative; width: min(100%, 540px); background: linear-gradient(170deg, var(--paper), var(--paper2)); border-radius: 4px;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(200, 150, 46, 0.35) inset; padding: 26px 22px 24px; animation: drop 0.7s cubic-bezier(.2,.9,.3,1.1) both; }
+.paper::before { content: ""; position: absolute; inset: 8px; border: 1px solid rgba(200, 150, 46, 0.55); outline: 1px solid rgba(200, 150, 46, 0.25); outline-offset: 3px; pointer-events: none; border-radius: 2px; }
+@keyframes drop { from { opacity: 0; transform: translateY(26px) rotate(-1.2deg); } }
+.paper.thump { animation: thump 0.45s ease; }
+@keyframes thump { 20% { transform: translateY(5px) scale(0.985); } 55% { transform: translateY(-2px); } }
+
+.top { text-align: center; padding: 4px 6px 12px; border-bottom: 1px solid rgba(42, 36, 56, 0.18); }
+.top svg { width: 44px; height: 44px; display: block; margin: 0 auto 2px; }
+.top h1 { margin: 0; font-size: clamp(24px, 6.4vw, 30px); font-weight: 700; letter-spacing: 0.08em; color: var(--night); }
+.top p { margin: 2px 0 0; font-size: 15px; letter-spacing: 0.04em; color: rgba(42, 36, 56, 0.65); }
+
+.stage { padding: 16px 6px 0; min-height: 300px; }
+.stage > * { animation: in 0.45s ease both; }
+@keyframes in { from { opacity: 0; transform: translateY(8px); } }
+.no { margin: 0 0 2px; font-size: 15px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--gold); font-weight: 700; }
+h2 { margin: 0 0 4px; font-size: clamp(23px, 6vw, 27px); font-weight: 700; color: var(--night); line-height: 1.15; }
+.q { margin: 0 0 14px; font-style: italic; color: rgba(42, 36, 56, 0.85); }
+.legal { margin: 0 0 12px; text-align: justify; hyphens: auto; }
+.legal b { font-weight: 700; color: var(--night); }
+.nick { font-family: "MonteCarlo", cursive; font-size: 1.35em; color: var(--pink); line-height: 1; white-space: nowrap; }
+
+.opts { display: grid; gap: 9px; margin: 0; padding: 0; list-style: none; }
+.opt { width: 100%; text-align: left; font: inherit; color: inherit; cursor: pointer; padding: 11px 14px 11px 44px; position: relative; min-height: 48px;
+  background: rgba(255, 255, 255, 0.5); border: 1px solid rgba(42, 36, 56, 0.25); border-radius: 10px; transition: background 0.2s, border-color 0.2s, transform 0.15s; touch-action: manipulation; }
+.opt::before { content: ""; position: absolute; left: 14px; top: 50%; width: 18px; height: 18px; margin-top: -10px; border: 1.5px solid rgba(42, 36, 56, 0.5); border-radius: 50%; background: #fffdf7; }
+.opt.many::before { border-radius: 4px; }
+.opt:hover { background: rgba(255, 255, 255, 0.85); }
+.opt:active { transform: scale(0.985); }
+.opt[aria-pressed="true"] { background: #fff; border-color: var(--pink); box-shadow: 0 0 0 1px var(--pink); }
+.opt[aria-pressed="true"]::before { background: var(--pink); border-color: var(--pink); box-shadow: inset 0 0 0 3px #fffdf7; }
+.opt:focus-visible, .btn:focus-visible, textarea:focus-visible { outline: 2px solid var(--night); outline-offset: 2px; }
+.note { min-height: 1.4em; margin: 10px 2px 0; font-style: italic; color: var(--pink); }
+textarea { width: 100%; min-height: 110px; font: inherit; color: inherit; padding: 10px 12px; border: 1px solid rgba(42, 36, 56, 0.3); border-radius: 10px; background: rgba(255, 255, 255, 0.7); resize: vertical; }
+
+.nav { display: flex; gap: 10px; align-items: center; margin-top: 16px; }
+.btn { font: inherit; font-weight: 700; letter-spacing: 0.03em; cursor: pointer; border-radius: 999px; padding: 11px 22px; min-height: 48px; border: 1px solid var(--night); background: var(--night); color: #fbf3e2; touch-action: manipulation; transition: opacity 0.2s, transform 0.15s; }
+.btn:active { transform: scale(0.97); }
+.btn.ghost { background: none; color: var(--night); border-color: rgba(27, 39, 71, 0.4); font-weight: 500; }
+.btn[disabled] { opacity: 0.35; cursor: default; }
+.nav .grow { flex: 1; }
+.dots { display: flex; gap: 5px; justify-content: center; margin-top: 16px; }
+.dots i { width: 7px; height: 7px; border-radius: 50%; background: rgba(42, 36, 56, 0.18); }
+.dots i.on { background: var(--gold); }
+
+.sum { margin: 0 0 14px; padding: 0; list-style: none; border-top: 1px solid rgba(42, 36, 56, 0.15); }
+.sum li { padding: 7px 0; border-bottom: 1px solid rgba(42, 36, 56, 0.15); }
+.sum b { display: block; font-size: 14px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--gold); font-weight: 700; }
+.signrow { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 8px; align-items: end; }
+.signbox { position: relative; }
+.signbox canvas, .signbox img { display: block; width: 100%; height: 120px; background: rgba(255, 255, 255, 0.55); border: 1px dashed rgba(42, 36, 56, 0.4); border-radius: 8px; touch-action: none; cursor: crosshair; }
+.signbox img { cursor: default; object-fit: contain; }
+.signbox .pre { height: 120px; display: grid; place-items: center; font-family: "MonteCarlo", cursive; font-size: 40px; color: var(--night); border-bottom: 1px solid rgba(42, 36, 56, 0.5); transform: rotate(-4deg); }
+.signbox small { display: block; margin-top: 4px; font-size: 14px; color: rgba(42, 36, 56, 0.7); text-align: center; }
+.clear { position: absolute; right: 6px; top: 6px; font: inherit; font-size: 14px; background: none; border: 0; color: rgba(42, 36, 56, 0.6); cursor: pointer; padding: 6px 8px; text-decoration: underline; }
+.hintline { min-height: 1.4em; margin: 10px 0 0; font-style: italic; color: var(--pink); }
+
+.stamp { position: absolute; right: 18px; bottom: 96px; padding: 6px 16px 4px; border: 4px double var(--seal); border-radius: 8px; color: var(--seal);
+  font-weight: 700; font-size: clamp(26px, 7vw, 34px); letter-spacing: 0.12em; transform: rotate(-13deg); opacity: 0.88; pointer-events: none; text-align: center; line-height: 1;
+  animation: stamp 0.45s cubic-bezier(.3,1.5,.5,1) both; mix-blend-mode: multiply; }
+.stamp small { display: block; font-size: 12px; letter-spacing: 0.1em; margin-top: 3px; font-weight: 500; }
+@keyframes stamp { from { opacity: 0; transform: rotate(-13deg) scale(2.6); } }
+.done { text-align: center; margin: 16px 0 0; font-style: italic; }
+.done b { font-style: normal; color: var(--night); }
+
+@media (prefers-reduced-motion: reduce) { .paper, .stage > *, .stamp, .paper.thump { animation-duration: 0.01s; } }
+</style>
+</head>
+<body>
+<a class="home" id="home" href="../index.html" aria-label="Gezegene dön">
+  <svg viewBox="0 0 32 32" aria-hidden="true">
+    <ellipse cx="16" cy="16" rx="15" ry="4.5" transform="rotate(-20 16 16)" fill="none" stroke="#f6c64f" stroke-width="1.4" opacity="0.55"/>
+    <circle cx="16" cy="16" r="9.5" fill="#f7a3c6"/>
+    <path d="M8 12.5c3-1.5 5 1.5 8 .5s4-3.5 7-2.5a9.5 9.5 0 0 0-15 2z" fill="#b48cea"/>
+    <path d="M9.5 21c3 1 4.5-2 7.5-1.5s4 2 6.5 0a9.5 9.5 0 0 1-14 1.500z" fill="#b48cea"/>
+    <path d="M1.800 21.200A15 4.500 -20 0 0 30.200 10.800" fill="none" stroke="#f6c64f" stroke-width="1.400" stroke-linecap="round"/>
+  </svg>
+</a>
+
+<main class="paper" id="paper">
+  <header class="top">
+    <svg viewBox="0 0 44 44" aria-hidden="true" fill="none" stroke="#c8962e" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M22 8v27M14 36h16M8 13h28M22 8a2 2 0 1 0 0-.01"/><path d="M8 13l-5 11h10zM36 13l-5 11h10z"/><path d="M3 24a5 3.500 0 0 0 10 0M31 24a5 3.500 0 0 0 10 0"/>
+    </svg>
+    <h1>RANDEVU TUTANAĞI</h1>
+    <p id="meta"></p>
+  </header>
+  <section class="stage" id="stage" aria-live="polite"></section>
+</main>
+
+<script>
+// ---------- edit me ----------
+const CONFIG = {
+  home: "../index.html",
+  // she fills this in AFTER the date. Where her signed report is sent: a free Web3Forms access key (web3forms.com) mails it to you. Empty = nothing is sent.
+  send: { accessKey: "fb86c639-6d13-4256-ba69-92b2900b443e", subject: "Randevu Tutanağı imzalandı" },
+  // this many minutes after she signs, the signed report is forgotten on her phone and the form starts from the beginning again
+  resetAfterMinutes: 60,
+  her: { name: "Beniz", title: "Kürk Prensesi" },
+  him: { name: "Talha", title: "Şoför" },
+  // type "one" = pick one, "many" = pick any number, "text" = she writes. note = the funny line shown when she picks it.
+  clauses: [
+    { id: "teslim", title: "Teslim Alma", q: "Şoför, Kürk Prensesi'ni kapıdan zamanında teslim aldı mı?", type: "one", options: [
+      { t: "Tam vaktinde, dakik bey", note: "Dakiklik tutanağa geçirildi. Şoför lehine delil." },
+      { t: "Birkaç dakika gecikti, affedildi", note: "Merhamet gösterildi. Emsal teşkil etmez." },
+      { t: "Geç kaldı, cezası kesilecek", note: "Cezai şart: bir kokteyl. Faiz işler." },
+      { t: "Asıl ben geciktim", note: "Bu beyan gizli tutulacaktır. Şoför kapıda sabırla beklemiştir." } ] },
+    { id: "kiyafet", title: "Şoförün Görünümü", q: "Şoför'ün bu geceki görünümü hakkında mahkemenin kanaati nedir?", type: "one", options: [
+      { t: "Çok yakışıklıydı", note: "Doğru cevap. Oybirliğiyle kabul edildi." },
+      { t: "Fena değildi, emek var", note: "Emek takdir edildi. Gelişime açık." },
+      { t: "Benim kadar şık değildi", note: "Rekabet baştan kaybedilmiştir." },
+      { t: "Galiba benim yardımıma ihtiyacı var", note: "Stil danışmanlığı Kürk Prensesi'ne devredildi. Alışveriş günü belirlenecek." } ] },
+    { id: "kokteyl", title: "Gecenin Kokteyli", q: "Gecenin en iyi kokteyli hangisiydi?", type: "one", options: [
+      { t: "İlk kokteylim", note: "İlk göz ağrısı unutulmaz." },
+      { t: "İkincisi", note: "İlki ısınma turuydu. Anlaşıldı." },
+      { t: "Talha'nınkinden çaldığım yudum", note: "Çalıntı kokteyl her zaman daha lezzetlidir. Suç zamanaşımına uğradı." },
+      { t: "Hepsi, ayrım yapamam", note: "Adil bir hâkim. Barmen de beraat etti." } ] },
+    { id: "sayim", title: "Kokteyl Sayımı", q: "Kürk Prensesi bu gece kaç kokteyl içti?", type: "one", options: [
+      { t: "1", note: "Mahkeme bu beyanı inandırıcı bulmadı." },
+      { t: "2", note: "Makul ve dengeli. Tanık ifadesiyle örtüşüyor." },
+      { t: "3", note: "Felsefe faslına geçilmiş olmalı." },
+      { t: "Saymadım, Şoför saysın", note: "Sayım yükümlülüğü Şoför'e aittir." } ] },
+    { id: "sohbet", title: "Sohbet Dökümü", q: "Gecenin sohbetinde neler vardı? (Birden fazla seçilebilir.)", type: "many", options: [
+      { t: "Dedikodu", note: "İçerik gizlidir. Dosyaya mühürlü zarfta girecek." },
+      { t: "Kahkaha krizi", note: "Yan masadan şikayet gelmedi. Şimdilik." },
+      { t: "Derin mevzular", note: "Hayatın anlamı kısmen çözüldü." },
+      { t: "Talha'nın esprileri", note: "Bazıları gerçekten komikti. Bazıları." },
+      { t: "İş konuşuldu", note: "İhlal! Adliye bu gece kapalıydı." } ] },
+    { id: "surus", title: "Şoförlük Hizmeti", q: "Sürüş ve eve teslim hizmeti nasıldı?", type: "one", options: [
+      { t: "Beş yıldız, kapıya kadar", note: "Eksiksiz teslim. Teslim tutanağı kapıda imzalandı." },
+      { t: "Güvenli ama müzik seçimi tartışılır", note: "Müzik yetkisi bir sonraki sefer Kürk Prensesi'ne geçer." },
+      { t: "Yol biraz uzatıldı", note: "Şikayetçi olunmadığı anlaşıldı." },
+      { t: "Öpücüğü hak etti", note: "Ödeme kapıda, elden yapılır. Makbuz kesilmez." } ] },
+    { id: "puan", title: "Gecenin Puanı", q: "Randevunun genel puanı nedir?", type: "one", options: [
+      { t: "10 / 10, kusursuz", note: "Tam puan. Şoför gururla tebliğ alacaktır." },
+      { t: "11 / 10, beklentiyi aştı", note: "Ölçek aşıldı. Bilirkişi raporu gerekebilir." },
+      { t: "9 / 10", note: "Bir puan naz payıdır. Usulen kesilmiştir." },
+      { t: "Puan gizli, Şoför merakta kalsın", note: "Gizlilik kararı verildi. Şoför bu gece uyuyamayacak." } ] },
+    { id: "karar", title: "Hüküm", q: "Mahkemenin Şoför hakkındaki kararı nedir?", type: "one", options: [
+      { t: "Beraat: bir sonraki randevuya hak kazandı", note: "Beraat kararı kesinleşti. Tarih Şoför'e bildirilecek." },
+      { t: "Müebbet: ömür boyu randevuya mahkûm", note: "İnfaz derhal başlar. Af çıkmaz." },
+      { t: "Denetimli serbestlik: haftada en az bir randevu", note: "Denetim Kürk Prensesi tarafından yapılır." },
+      { t: "Ceza: sıradaki kokteyller ondan", note: "Zaten öyleydi. Karar yine de yazıldı." } ] },
+    { id: "ek", title: "Ek Beyan", q: "Kürk Prensesi'nin tutanağa eklemek istediği beyan (isteğe bağlı):", type: "text", placeholder: "Örn: Gecenin en sevdiğim anı…" },
+  ],
+};
+
+(() => {
+  const $ = id => document.getElementById(id), stage = $("stage"), paper = $("paper");
+  const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const KEY = "randevu-tutanagi", PENDING = "randevu-pending";
+  const C = CONFIG.clauses, now = new Date();
+  const dateTR = d => d.toLocaleDateString("tr-TR", { day: "numeric", month: "long", year: "numeric" });
+  const pad = n => String(n).padStart(2, "0");
+  const contractNo = `${now.getFullYear()}/${pad(now.getMonth() + 1)}${pad(now.getDate())}-BK`;
+  $("meta").textContent = `Tutanak No: ${contractNo} · ${dateTR(now)}`;
+  $("home").href = CONFIG.home;
+  const load = k => { try { return JSON.parse(localStorage.getItem(k) || "null"); } catch (e) { return null; } };
+  const save = (k, v) => { try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} };
+
+  let answers = {}, step = -1; // -1 = the opening page, 0..n-1 = the clauses, n = signing
+  const h = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
+  const show = (...nodes) => { stage.replaceChildren(...nodes); if (stage.getBoundingClientRect().top < 0) paper.scrollIntoView({ behavior: reduced ? "auto" : "smooth" }); };
+  const said = c => { const a = answers[c.id]; return Array.isArray(a) ? a.join(", ") : (a || "").trim(); };
+
+  function intro() {
+    const p1 = h("p", "legal"), p2 = h("p", "legal"), p3 = h("p", "legal");
+    p1.innerHTML = `İşbu tutanak, bir tarafta <b>${CONFIG.her.name} Hanım</b> (bundan böyle <span class="nick">“${CONFIG.her.title}”</span> olarak anılacaktır) ile diğer tarafta <b>${CONFIG.him.name}</b> (bundan böyle <span class="nick">“${CONFIG.him.title}”</span> olarak anılacaktır) arasında gerçekleşen kokteyl randevusunun değerlendirilmesi amacıyla düzenlenmiştir.`;
+    p2.innerHTML = `Şoför; Kürk Prensesi'ni evinden teslim almış, kokteyller eşliğinde eğlendirmeye çalışmış ve gecenin sonunda aynı adrese teslim etmiştir. Bu hizmetin <b>eksiksiz ve mutlu</b> şekilde yerine getirilip getirilmediği aşağıda tespit edilecektir.`;
+    p3.innerHTML = `Tutanaktaki tüm tespitler Kürk Prensesi'nin beyanına dayanır. Şoför'ün savunma ve itiraz hakkı <b>yoktur</b>.`;
+    const nav = h("div", "nav"), go = h("button", "btn", "Değerlendirmeye başla");
+    go.type = "button"; go.onclick = () => clause(0);
+    nav.append(h("span", "grow"), go);
+    show(h("p", "no", "Taraflar ve Konu"), p1, p2, p3, nav);
+  }
+
+  function clause(i) {
+    step = i;
+    const c = C[i], nodes = [h("p", "no", `Madde ${i + 1} / ${C.length}`), h("h2", "", c.title), h("p", "q", c.q)];
+    const note = h("p", "note"), next = h("button", "btn", i === C.length - 1 ? "İmzaya geç" : "Sonraki madde"), back = h("button", "btn ghost", "Geri");
+    next.type = back.type = "button";
+    if (c.type === "text") {
+      const ta = h("textarea"); ta.placeholder = c.placeholder || ""; ta.value = answers[c.id] || ""; ta.setAttribute("aria-label", c.title); ta.maxLength = 600;
+      ta.oninput = () => { answers[c.id] = ta.value; note.textContent = ta.value.trim() ? "Talep tutanağa geçirildi." : ""; };
+      nodes.push(ta);
+    } else {
+      const ul = h("ul", "opts"), many = c.type === "many";
+      const picked = () => many ? (answers[c.id] || []) : [answers[c.id]];
+      const sync = () => { for (const b of ul.querySelectorAll(".opt")) b.setAttribute("aria-pressed", picked().includes(b.dataset.t) ? "true" : "false"); next.disabled = !said(c); };
+      for (const o of c.options) {
+        const li = h("li"), b = h("button", "opt" + (many ? " many" : ""), o.t);
+        b.type = "button"; b.dataset.t = o.t;
+        b.onclick = () => {
+          if (many) { const a = answers[c.id] || []; answers[c.id] = a.includes(o.t) ? a.filter(x => x !== o.t) : [...a, o.t]; note.textContent = answers[c.id].includes(o.t) ? o.note || "" : ""; }
+          else { answers[c.id] = o.t; note.textContent = o.note || ""; }
+          sync();
+        };
+        li.append(b); ul.append(li);
+      }
+      nodes.push(ul); setTimeout(sync);
+    }
+    back.onclick = () => i ? clause(i - 1) : intro();
+    next.onclick = () => i === C.length - 1 ? sign() : clause(i + 1);
+    const nav = h("div", "nav"); nav.append(back, h("span", "grow"), next);
+    const dots = h("div", "dots"); C.forEach((_, k) => dots.append(h("i", k <= i ? "on" : "")));
+    show(...nodes, note, nav, dots);
+  }
+
+  const summary = () => { const ul = h("ul", "sum"); C.forEach((c, i) => { const li = h("li"), b = h("b", "", `Madde ${i + 1} · ${c.title}`); li.append(b, document.createTextNode(said(c) || "—")); ul.append(li); }); return ul; };
+  const signRow = (mine) => {
+    const row = h("div", "signrow"), a = h("div", "signbox"), b = h("div", "signbox");
+    a.append(mine, h("small", "", `${CONFIG.her.name} Hanım · ${CONFIG.her.title}`));
+    b.append(h("div", "pre", CONFIG.him.name), h("small", "", `${CONFIG.him.name} · ${CONFIG.him.title} (itirazsız imzalamıştır)`));
+    row.append(a, b); return row;
+  };
+
+  function sign() {
+    step = C.length;
+    const cv = h("canvas"); cv.setAttribute("aria-label", "İmza alanı: parmağınla imzala");
+    const clear = h("button", "clear", "Temizle"); clear.type = "button";
+    const row = signRow(cv); row.firstChild.insertBefore(clear, cv.nextSibling);
+    const hint = h("p", "hintline"), ok = h("button", "btn", "İmzala ve onayla"), back = h("button", "btn ghost", "Geri");
+    ok.type = back.type = "button";
+    const p = h("p", "legal"); p.innerHTML = `Kürk Prensesi yukarıdaki beyanların tamamen doğru, biraz da nazlı olduğunu kabul eder. Şoför, hakkındaki her tespiti peşinen kabul etmiştir. <b>Lütfen aşağıdaki alana parmağınla imzanı at.</b>`;
+    const nav = h("div", "nav"); nav.append(back, h("span", "grow"), ok);
+    show(h("p", "no", "Tespitler ve İmza"), summary(), p, row, hint, nav);
+    // the signature: drawn with a finger or the mouse
+    const ctx = cv.getContext("2d"); let ink = 0, last = null;
+    const fit = () => { const r = cv.getBoundingClientRect(), d = Math.min(devicePixelRatio || 1, 3); cv.width = r.width * d; cv.height = r.height * d; ctx.scale(d, d); ctx.lineWidth = 2.4; ctx.lineCap = ctx.lineJoin = "round"; ctx.strokeStyle = "#1b2747"; ink = 0; };
+    fit();
+    const pos = e => { const r = cv.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; };
+    cv.onpointerdown = e => { cv.setPointerCapture(e.pointerId); last = pos(e); ctx.beginPath(); ctx.arc(last[0], last[1], 1.2, 0, 7); ctx.fillStyle = "#1b2747"; ctx.fill(); ink += 1; hint.textContent = ""; };
+    cv.onpointermove = e => { if (!last) return; const q = pos(e); ctx.beginPath(); ctx.moveTo(last[0], last[1]); ctx.lineTo(q[0], q[1]); ctx.stroke(); ink += Math.hypot(q[0] - last[0], q[1] - last[1]); last = q; };
+    cv.onpointerup = cv.onpointercancel = () => { last = null; };
+    clear.onclick = () => { ctx.clearRect(0, 0, cv.width, cv.height); ink = 0; };
+    back.onclick = () => clause(C.length - 1);
+    ok.onclick = () => {
+      if (ink < 40) { hint.textContent = "İmzasız tutanak geçersizdir, hanımefendi. Lütfen imzala."; return; }
+      let img = ""; try { img = cv.toDataURL("image/png"); } catch (e) {}
+      const rec = { answers, signedAt: new Date().toISOString(), no: contractNo, sig: img };
+      save(KEY, rec); deliver(rec); done(rec, true);
+    };
+  }
+
+  function done(rec, fresh) {
+    answers = rec.answers || {};
+    const when = new Date(rec.signedAt), img = h("img"); img.alt = `${CONFIG.her.name} Hanım'ın imzası`; if (rec.sig) img.src = rec.sig;
+    const stamp = h("div", "stamp"); stamp.append("ONAYLANDI", h("small", "", `${dateTR(when)} · ${pad(when.getHours())}:${pad(when.getMinutes())}`));
+    const p = h("p", "done"); p.innerHTML = `İşbu tutanak <b>karşı tarafa tebliğ edilmiştir</b>.<br>Karar kesindir, temyiz yolu kapalıdır. İyi geceler, Kürk Prensesi.`;
+    const again = h("button", "btn ghost", "Yeniden değerlendir"), home = h("a", "btn", "Gezegene dön");
+    again.type = "button"; again.onclick = () => clause(0);
+    home.href = CONFIG.home; home.style.textDecoration = "none"; home.style.display = "inline-grid"; home.style.placeItems = "center";
+    const nav = h("div", "nav"); nav.append(again, h("span", "grow"), home);
+    show(h("p", "no", "İmzalanmış Tutanak"), summary(), signRow(img), p, nav);
+    setTimeout(() => { paper.append(stamp); paper.classList.remove("thump"); void paper.offsetWidth; paper.classList.add("thump"); if (fresh && navigator.vibrate) navigator.vibrate(40); }, fresh && !reduced ? 500 : 0);
+  }
+
+  // ---------- sending it to him: by e-mail through Web3Forms; kept and retried if the network fails ----------
+  function letter(rec) {
+    const when = new Date(rec.signedAt);
+    const lines = C.map((c, i) => { const a = rec.answers[c.id]; return `Madde ${i + 1} - ${c.title}: ${(Array.isArray(a) ? a.join(", ") : (a || "").trim()) || "-"}`; });
+    return `Randevu Tutanağı No: ${rec.no}\nİmza zamanı: ${dateTR(when)} ${pad(when.getHours())}:${pad(when.getMinutes())}\n\n${lines.join("\n")}\n\n${CONFIG.her.name} Hanım tutanağı imzaladı.`;
+  }
+  function post(subject, message) { // a plain form post: browsers send it without asking the service for permission first
+    const f = new FormData();
+    f.append("access_key", CONFIG.send.accessKey); f.append("subject", subject); f.append("from_name", "Randevu Tutanağı"); f.append("message", message);
+    return fetch("https://api.web3forms.com/submit", { method: "POST", body: f });
+  }
+  async function deliver(rec) {
+    if (!(CONFIG.send && CONFIG.send.accessKey)) return;
+    save(PENDING, rec);
+    try { const r = await post(CONFIG.send.subject, letter(rec)); if (r.ok) save(PENDING, null); }
+    catch (e) {} // no network: it stays waiting and is sent on the next visit
+  }
+  const waiting = load(PENDING);
+  if (waiting) deliver(waiting);
+  addEventListener("online", () => { const w = load(PENDING); if (w) deliver(w); });
+
+  // testing: #step=3 opens clause 3, #step=sign the signing page, #reset forgets a signed contract
+  if (/reset/.test(location.hash)) { save(KEY, null); save(PENDING, null); }
+  let signed = load(KEY);
+  if (signed && CONFIG.resetAfterMinutes && !(Date.now() - new Date(signed.signedAt).getTime() < CONFIG.resetAfterMinutes * 60000)) { save(KEY, null); signed = null; } // an hour has passed: a clean sheet
+  const jump = /step=(\w+)/.exec(location.hash);
+  if (/testmail/.test(location.hash)) { // testing: #testmail sends a test e-mail and shows what the service answered
+    const out = h("p", "legal", "Deneme e-postası gönderiliyor…"); show(h("p", "no", "E-posta denemesi"), out);
+    post("Randevu Tutanağı: deneme", "Bu bir deneme e-postasıdır. Ulaştıysa kurulum çalışıyor.")
+      .then(r => r.text().then(t => { out.textContent = (r.ok ? "GÖNDERİLDİ. Gelen kutunu kontrol et. " : "GÖNDERİLEMEDİ (" + r.status + "). ") + t.slice(0, 200); }))
+      .catch(e => { out.textContent = "GÖNDERİLEMEDİ: " + e; });
+  } else if (jump) { for (const c of C) answers[c.id] = c.type === "many" ? [c.options[0].t] : c.type === "one" ? c.options[1].t : ""; jump[1] === "sign" ? sign() : clause(clamp(+jump[1] - 1 || 0)); }
+  else if (signed && signed.answers) done(signed, false);
+  else intro();
+  function clamp(i) { return Math.max(0, Math.min(C.length - 1, i)); }
+})();
+</script>
+</body>
+</html>
